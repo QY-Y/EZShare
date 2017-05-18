@@ -70,6 +70,7 @@ public class cliclient {
 		final Option secret = Option.builder("s").longOpt("secret").desc("secret").hasArg().build();
 		options.addOption(secret);
 
+		
 		final Option servers = Option.builder("se").longOpt("servers")
 				.desc("server list, host1:port1,host2:port2,...").hasArg().build();
 		options.addOption(servers);
