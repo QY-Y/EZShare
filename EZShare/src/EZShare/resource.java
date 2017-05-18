@@ -20,6 +20,10 @@ public class resource {
 	private String Owner = "";
 	private String EZserver;
 
+	
+	
+	
+	
 	public Boolean setName(String name) {
 		try {
 			String tmp = name.trim();

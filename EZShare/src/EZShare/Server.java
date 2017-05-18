@@ -38,6 +38,10 @@ public class Server {
 	private static int MAXFILESIZE = 20 * 1024 * 1024;
 
 	DataOutputStream output;
+	
+	
+	
+	
 
 	// Identifies the user number connected
 

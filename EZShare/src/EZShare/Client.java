@@ -23,6 +23,8 @@ public class Client {
 		if (json_args.getBoolean("debug"))
 			log.setLevel(Level.ALL);
 		else
+			
+			
 			log.setLevel(Level.INFO);
 		String ip = json_args.getString("host");
 		int port = json_args.getInt("port");

@@ -27,6 +27,9 @@ public class cliserver {
 
 		this.args = args;
 
+		
+		
+		
 		options.addOption("h", "help", false, "show help");
 		final Option Port = Option.builder("p").longOpt("port").desc("Config file for Genome Store").hasArg().build();
 		options.addOption(Port);
