@@ -156,8 +156,7 @@ public class Client {
 		if (input.has("description"))
 			publish_description = input.getString("description");
 		if (input.has("uri")){
-			String uri = input.getString("uri");
-			//publish_uri = uri.replace("/", "\\/");
+			publish_uri = input.getString("uri");
 		}
 		if (input.has("channel"))
 			publish_channel = input.getString("channel");
