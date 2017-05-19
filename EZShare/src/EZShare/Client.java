@@ -116,6 +116,17 @@ public class Client {
 						}
 					}
 				}
+			} else if(json_args.has("query")){
+				int k = 0;
+				while (k < 20) {
+					if (input.available() > 0) {
+						String message = input.readUTF();
+						log.log(Level.INFO, "[received]:" + message);
+					}					
+				}
+				while (true){
+					Thread.sleep(100);
+				}
 			} else {
 				while (true) {
 					if (input.available() > 0) {
