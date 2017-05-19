@@ -635,7 +635,7 @@ public class Server {
 					json_outputResource.put("name", r.getName());
 					json_outputResource.put("tags", r.getTags());
 					json_outputResource.put("description", r.getDescription());
-					json_outputResource.put("uri", r.getURI().replace("/", "\\/"));
+					json_outputResource.put("uri", r.getURI());
 					json_outputResource.put("channel", r.getChannel());
 					if (r.getOwner().equals("")) {
 						json_outputResource.put("owner", "");
@@ -758,7 +758,7 @@ public class Server {
 					fetchResult.put("name", fetchResource.getName());
 					fetchResult.put("tags", fetchResource.getTags());
 					fetchResult.put("description", fetchResource.getDescription());
-					fetchResult.put("uri", fetchResource.getURI().replace("/", "\\/"));
+					fetchResult.put("uri", fetchResource.getURI());
 					fetchResult.put("channel", fetchResource.getChannel());
 					if (fetchResource.getOwner().equals("")) {
 						fetchResult.put("owner", "");
