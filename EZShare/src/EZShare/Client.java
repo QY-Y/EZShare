@@ -157,7 +157,7 @@ public class Client {
 			publish_description = input.getString("description");
 		if (input.has("uri")){
 			String uri = input.getString("uri");
-			publish_uri = uri.replace("/", "\\/");
+			//publish_uri = uri.replace("/", "\\/");
 		}
 		if (input.has("channel"))
 			publish_channel = input.getString("channel");
@@ -199,7 +199,7 @@ public class Client {
 		if (input.has("description"))
 			remove_description = input.getString("description");
 		if (input.has("uri"))
-			remove_uri = input.getString("uri").replace("/", "\\/");
+			remove_uri = input.getString("uri");
 		if (input.has("channel"))
 			remove_channel = input.getString("channel");
 		if (input.has("owner"))
@@ -230,7 +230,7 @@ public class Client {
 			if (input.has("description"))
 				resource.put("description", input.getString("description"));
 			if (input.has("uri"))
-				resource.put("uri", input.getString("uri").replace("/", "\\/"));
+				resource.put("uri", input.getString("uri"));
 			if (input.has("channel"))
 				resource.put("channel", input.getString("channel"));
 			if (input.has("owner"))
@@ -279,7 +279,7 @@ public class Client {
 			query_description = input.getString("description");
 		}
 		if (input.has("uri")) {
-			query_uri = input.getString("uri").replace("/", "\\/");
+			query_uri = input.getString("uri");
 		}
 		if (input.has("channel")) {
 			query_channel = input.getString("channel");
@@ -330,7 +330,7 @@ public class Client {
 			fetch_description = input.getString("description");
 		}
 		if (input.has("uri")) {
-			fetch_uri = input.getString("uri").replace("/", "\\/");
+			fetch_uri = input.getString("uri");
 		}
 		if (input.has("channel")) {
 			fetch_channel = input.getString("channel");
