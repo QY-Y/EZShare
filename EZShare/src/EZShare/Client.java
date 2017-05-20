@@ -122,10 +122,9 @@ public class Client {
 					if (input.available() > 0) {
 						String message = input.readUTF();
 						log.log(Level.INFO, "[received]:" + message);
-					}					
-				}
-				while (true){
+					}
 					Thread.sleep(100);
+					k++;
 				}
 			} else {
 				while (true) {
