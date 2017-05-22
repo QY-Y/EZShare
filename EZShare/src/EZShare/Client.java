@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.logging.Level;
@@ -29,7 +31,12 @@ public class Client {
 		String ip = json_args.getString("host");
 		int port = json_args.getInt("port");
 		log.log(Level.WARNING, "connecting to " + ip + ":" + port);
-		try (Socket socket = new Socket(ip, port)) {
+		try {
+			
+			System.setProperty("javax.net.ssl.trustStore", "clientKeyStore/client.jks");
+			SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+			SSLSocket socket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
+			
 			// Output and Input Stream sunrise.cis.unimelb.edu.au:3780
 			DataInputStream input = new DataInputStream(socket.getInputStream());
 			DataOutputStream output = new DataOutputStream(socket.getOutputStream());

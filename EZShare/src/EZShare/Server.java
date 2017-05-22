@@ -6,11 +6,15 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
 
 import javax.net.ServerSocketFactory;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+
+import java.net.UnknownHostException;
+
 
 import CLI.cliserver;
 import EZShare.resource;
@@ -53,13 +57,18 @@ public class Server {
 		else
 			log.setLevel(Level.WARNING);
 		ServerSocketFactory factory = ServerSocketFactory.getDefault();
-		String port = arg.getString("port");
+		int port = arg.getInt("port");
 		secret = arg.getString("secret");
 		cil = arg.getInt("connectionintervallimit");
 		eil = arg.getInt("exchangeinterval");
 		String host = arg.getString("advertisedhostname");
-
-		try (ServerSocket server = factory.createServerSocket(Integer.parseInt(port))) {
+		System.setProperty("javax.net.ssl.keyStore","serverKeystore/server.jks");
+		System.setProperty("javax.net.ssl.keyStorePassword","sdfjkl");
+		
+		try {
+			SSLServerSocketFactory sslserversocketfactory = (SSLServerSocketFactory) SSLServerSocketFactory
+					.getDefault();
+			SSLServerSocket sslserversocket = (SSLServerSocket) sslserversocketfactory.createServerSocket(port);
 			log.log(Level.INFO, "Start the EZShare Server");
 			log.log(Level.INFO, "using advertised hostname: " + host);
 			log.log(Level.INFO, "using secret: " + secret);
@@ -77,7 +86,7 @@ public class Server {
 			// Wait for connections.
 
 			while (true) {
-				Socket client = server.accept();
+				SSLSocket client = (SSLSocket) sslserversocket.accept();
 				String client_address = client.getInetAddress().toString();
 				if (!BlackList.has(client_address)) {
 					BlackList.put(client_address, System.currentTimeMillis());
@@ -464,7 +473,7 @@ public class Server {
 		}
 	}
 
-	private static void query(JSONObject input, Socket client) {
+	private static void query(JSONObject input, SSLSocket client) {
 		JSONObject json_output = new JSONObject();
 		String qname = "";
 		String qdescription = "";
@@ -662,7 +671,7 @@ public class Server {
 		}
 	}
 
-	private static void fetch(JSONObject input, Socket client) {
+	private static void fetch(JSONObject input, SSLSocket client) {
 		JSONObject json_output = new JSONObject();
 		String fURI = "";
 		String fchannel = "";
@@ -802,9 +811,9 @@ public class Server {
 
 	}
 
-	private static void serveClient(Socket client) {
+	private static void serveClient(SSLSocket client) {
 		JSONObject json_output = new JSONObject();
-		Socket clientSocket = client;
+		SSLSocket clientSocket = client;
 		DataInputStream input = null;
 
 		JSONObject json_input = null;
@@ -897,7 +906,8 @@ public class Server {
 				int port = randomServer.getInt("port");
 
 				try {
-					Socket socket = new Socket(ip, port);
+					SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+					SSLSocket socket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
 					DataInputStream input = new DataInputStream(socket.getInputStream());
 					DataOutputStream output = new DataOutputStream(socket.getOutputStream());
 					JSONObject json_output = new JSONObject();
