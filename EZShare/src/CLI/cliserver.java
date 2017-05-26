@@ -30,6 +30,8 @@ public class cliserver {
 		options.addOption("h", "help", false, "show help");
 		final Option Port = Option.builder("p").longOpt("port").desc("Config file for Genome Store").hasArg().build();
 		options.addOption(Port);
+		final Option Sp = Option.builder("sp").longOpt("sport").desc("secure port").hasArg().build();
+		options.addOption(Sp);
 
 		final Option Host = Option.builder("ah").longOpt("advertisedhostname").desc("advertised hostname").hasArg()
 				.build();
@@ -59,6 +61,7 @@ public class cliserver {
 			addr = InetAddress.getLocalHost();
 			output.put("advertisedhostname", addr.getHostName());
 			output.put("port", "3000");
+			output.put("sport", "3781");
 			output.put("secret", UUID.randomUUID().toString());
 			output.put("debug", "false");
 			output.put("connectionintervallimit", "1");
@@ -70,7 +73,7 @@ public class cliserver {
 
 			if (cmd.hasOption("h"))
 				help();
-//			log.log(Level.INFO, "input args:" + output.toString());
+
 			return output;
 
 		} catch (

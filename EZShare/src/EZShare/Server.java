@@ -1,20 +1,26 @@
 package EZShare;
 
+import java.io.BufferedReader;
 import java.io.DataInputStream;
 
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 
 import javax.net.ServerSocketFactory;
+import javax.net.SocketFactory;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.URI;
+import java.net.URL;
 import java.net.UnknownHostException;
-
 
 import CLI.cliserver;
 import EZShare.resource;
@@ -24,8 +30,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.json.*;
+import java.io.InputStream;
 
 import java.util.logging.Level;
 
@@ -33,79 +42,172 @@ public class Server {
 	private static final Logger log = Logger.getLogger(Server.class.getName());
 	private static String secret = "abc";
 	private static JSONArray ServerList = new JSONArray();
+	private static JSONArray SSLServerList = new JSONArray();
 	private static ArrayList<String> PublicChannel = new ArrayList<String>();
 	private static ArrayList<resource> ResourcesList = new ArrayList<resource>();
 	private static JSONObject Channels = new JSONObject();
 	private static int cil = 1;
 	private static int eil = 600;
+	private static int port = 3000;
+	private static int sslport = 3781;
 	private static JSONObject BlackList = new JSONObject();
 	private static int MAXFILESIZE = 20 * 1024 * 1024;
+	private static int MAXthread = 100;
 
 	DataOutputStream output;
-	
-	
-	
-	
 
-	// Identifies the user number connected
-
-	public static void main(String[] args) {
-		Channels.put("Public", PublicChannel);
-		JSONObject arg = new cliserver(args).parse(log);
-		if (arg.getBoolean("debug"))
-			log.setLevel(Level.ALL);
-		else
-			log.setLevel(Level.WARNING);
+	public static ServerSocket linsten_socket(int port) {
 		ServerSocketFactory factory = ServerSocketFactory.getDefault();
-		int port = arg.getInt("port");
-		secret = arg.getString("secret");
-		cil = arg.getInt("connectionintervallimit");
-		eil = arg.getInt("exchangeinterval");
-		String host = arg.getString("advertisedhostname");
-		System.setProperty("javax.net.ssl.keyStore","serverKeystore/server.jks");
-		System.setProperty("javax.net.ssl.keyStorePassword","sdfjkl");
-		
+		ServerSocket server;
+		try {
+			server = factory.createServerSocket(port);
+			log.log(Level.INFO, "socket listening on port " + port);
+			return server;
+		} catch (IOException e) {
+			log.log(Level.SEVERE, e.toString());
+			log.log(Level.SEVERE, "SECURE LISTENING ON  PORT FALIED PORT NUM:" + String.valueOf(port));
+			System.exit(0);
+			return null;
+		}
+	};
+
+	public static SSLServerSocket linsten_sslsocket(int port) {
+		// return a SSLServerSocket if success, or null if failed
+		 String path = Thread.currentThread().
+		 getContextClassLoader().getResource("EZShare/server.jks").getPath();
+		 System.setProperty("javax.net.ssl.keyStore", path);
+
+//		System.setProperty("javax.net.ssl.keyStore", "serverKeystore/server.jks");
+		System.setProperty("javax.net.ssl.keyStorePassword", "sdfjkl");
 		try {
 			SSLServerSocketFactory sslserversocketfactory = (SSLServerSocketFactory) SSLServerSocketFactory
 					.getDefault();
 			SSLServerSocket sslserversocket = (SSLServerSocket) sslserversocketfactory.createServerSocket(port);
-			log.log(Level.INFO, "Start the EZShare Server");
-			log.log(Level.INFO, "using advertised hostname: " + host);
-			log.log(Level.INFO, "using secret: " + secret);
-			log.log(Level.INFO, "bound to port " + port);
-			log.log(Level.INFO, "Started");
-			// start thread to auto exchange
-			Thread auto_ex = new Thread(() -> autoExchange(eil));
-			auto_ex.setDaemon(true);
-			auto_ex.start();
-			// start thread to auto remove balcklist
-			Thread auto_black = new Thread(() -> BlackListRemover(cil));
-			auto_black.setDaemon(true);
-			auto_black.start();
+			log.log(Level.INFO, "secure socket listening on port " + port);
+			return sslserversocket;
+		} catch (IOException e) {
+			log.log(Level.SEVERE, e.toString());
+			log.log(Level.SEVERE, "LISTENING ON  PORT FALIED PORT NUM:" + String.valueOf(port));
+			System.exit(0);
+			return null;
+		}
+	};
 
-			// Wait for connections.
+	// Identifies the user number connected
+	public static JSONObject PutError(String message, JSONObject output) {
+		output.put("response", "error");
+		output.put("errorMessage", "missing or invalid server list");
+		return output;
+	}
 
-			while (true) {
-				SSLSocket client = (SSLSocket) sslserversocket.accept();
+	public static void set_args(JSONObject arg) {
+		if (arg.getBoolean("debug"))
+			log.setLevel(Level.ALL);
+		else
+			log.setLevel(Level.WARNING);
+		port = arg.getInt("port");
+		sslport = arg.getInt("sport");
+		secret = arg.getString("secret");
+		cil = arg.getInt("connectionintervallimit");
+		eil = arg.getInt("exchangeinterval");
+		String host = arg.getString("advertisedhostname");
+		log.log(Level.INFO, "Start the EZShare Server");
+		log.log(Level.INFO, "using advertised hostname: " + host);
+		log.log(Level.INFO, "using secret: " + secret);
+		log.log(Level.INFO, "Started");
+		Channels.put("Public", PublicChannel);
+	}
+
+	public static void main(String[] args) {
+
+		JSONObject arg = new cliserver(args).parse(log);
+		set_args(arg);
+		SSLServerSocket sslserversocket = linsten_sslsocket(sslport);
+		ServerSocket serversocket = linsten_socket(port);
+
+		// start thread to auto exchange
+		Thread auto_ex = new Thread(() -> autoExchange(eil));
+		auto_ex.setDaemon(true);
+		auto_ex.start();
+
+		Thread auto_sslex = new Thread(() -> autoSSLExchange(eil));
+		auto_sslex.setDaemon(true);
+		auto_sslex.start();
+
+		// start thread to auto remove balcklist
+		Thread auto_black = new Thread(() -> BlackListRemover(cil));
+		auto_black.setDaemon(true);
+		auto_black.start();
+
+		// Wait for connections.
+		Thread selecter = new Thread(() -> LISTEN(serversocket, log));
+		Thread selecter_ssl = new Thread(() -> SSL_LISTEN(sslserversocket));
+		selecter_ssl.setDaemon(true);
+		selecter.setDaemon(true);
+		selecter.start();
+		selecter_ssl.start();
+
+		try {
+			Thread.sleep(1000 * 3600 * 24);
+		} catch (InterruptedException e) {
+			log.log(Level.SEVERE, e.toString());
+			return;
+		}
+	}
+
+	private static void SSL_LISTEN(SSLServerSocket serversocket) {
+		ExecutorService SSLpool = Executors.newFixedThreadPool(MAXthread / 2);
+		while (true) {
+			try {
+				serversocket.setNeedClientAuth(true);
+				SSLSocket client = (SSLSocket) serversocket.accept();
 				String client_address = client.getInetAddress().toString();
 				if (!BlackList.has(client_address)) {
 					BlackList.put(client_address, System.currentTimeMillis());
 					// Start a new thread for a connection
-					Thread t = new Thread(() -> serveClient(client));
+					// SSLpool.execute(new SSLClientHandler(client, log));
+					Thread t = new Thread(() -> sslserveClient(client));
 					t.setDaemon(true);
 					t.start();
 				} else {
 					client.close();
 					log.log(Level.INFO, client_address + "blocked");
 				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-		} catch (IOException e) {
-			log.log(Level.INFO, e.toString());
 
 		}
 	}
 
-	// assign an uuid for the client
+	private static void LISTEN(ServerSocket serversocket, Logger log) {
+		ExecutorService pool = Executors.newFixedThreadPool(MAXthread / 2);
+		while (true) {
+			try {
+				Socket client = (Socket) serversocket.accept();
+				String client_address = client.getInetAddress().toString();
+				if (!BlackList.has(client_address)) {
+					BlackList.put(client_address, System.currentTimeMillis());
+					// Start a new thread for a connection
+					// pool.execute(new ClientHandler(client, log));
+					Thread t = new Thread(() -> serveClient(client, log));
+					t.setDaemon(true);
+					t.start();
+					log.log(Level.INFO, "one socket client");
+				} else {
+					client.close();
+					log.log(Level.INFO, client_address + "blocked");
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return;
+			}
+
+		}
+	}
+
 	private static void BlackListRemover(int cli) {
 		cli = cli * 1000;
 		while (true) {
@@ -144,15 +246,14 @@ public class Server {
 		}
 	}
 
-	private static JSONObject exchange(JSONObject input) {
+	private static JSONObject exchange(JSONObject input, Boolean sslflag) {
 		JSONObject return_message = new JSONObject();
 		JSONArray json_serverlist = (JSONArray) input.get("serverList");
 
 		int i = 0;
 		// empty list check
 		if (0 >= json_serverlist.length()) {
-			return_message.put("response", "error");
-			return_message.put("errorMessage", "missing or invalid server list");
+			return_message = PutError("missing or invalid server list", return_message);
 			return return_message;
 		}
 
@@ -165,8 +266,7 @@ public class Server {
 					hostname = json_server.getString("hostname");
 					port = json_server.getInt("port");
 				} catch (Exception e) {
-					return_message.put("response", "error");
-					return_message.put("errorMessage", "missing or invalid server list");
+					return_message = PutError(e.toString(), return_message);
 					log.log(Level.INFO, e.toString());
 					return return_message;
 				}
@@ -175,21 +275,25 @@ public class Server {
 					i++;
 					if (i == json_serverlist.length()) {
 						for (int k = 0; k < json_serverlist.length(); k++) {
-							ServerList.put(json_serverlist.getJSONObject(k));
+							JSONObject temp = json_serverlist.getJSONObject(k);
+
+							if (sslflag) {
+								SSLServerList.put(temp);
+							} else {
+								ServerList.put(temp);
+							}
 						}
 						return_message.put("response", "success");
 					}
 				} else {
-					return_message.put("response", "error");
-					return_message.put("errorMessage", "missing or invalid server list");
+					return_message = PutError("missing or invalid server list", return_message);
 					return return_message;
 				}
 
 			} catch (Exception e) {
-				return_message.put("response", "error");
-				return_message.put("errorMessage", "missing or invalid server list");
+				log.log(Level.WARNING, e.toString());
+				return_message = PutError("missing or invalid server list", return_message);
 			}
-
 		}
 		return return_message;
 	}
@@ -203,11 +307,11 @@ public class Server {
 			// check uri
 			resource tmp_re = new resource();
 			if (!inputJSON.has("uri")) {
-				output.put("response", "error");
-				output.put("errorMessage", "invalid resource");
+				output = PutError("invalid resource", output);
 				return output;
 			}
 			String uri = inputJSON.getString("uri").replace("\\/", "/");
+			// String uri = inputJSON.getString("uri").replace("\/", "/");
 			if (uri.startsWith("file:")) {
 				output.put("response", "error");
 				output.put("errorMessage", "invalid resource");
@@ -811,32 +915,45 @@ public class Server {
 
 	}
 
-	private static void serveClient(SSLSocket client) {
+	private static void sslserveClient(SSLSocket client) {
 		JSONObject json_output = new JSONObject();
 		SSLSocket clientSocket = client;
-		DataInputStream input = null;
-
+		InputStream input = null;
 		JSONObject json_input = null;
 		Boolean IsError = false;
 		// check JSON
 		try {
+			input = client.getInputStream();
+			InputStreamReader inputstreamreader = new InputStreamReader(input);
+			BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
 			input = new DataInputStream(clientSocket.getInputStream());
-			json_input = new JSONObject(input.readUTF());
+			json_input = new JSONObject(input.read());
+
 		} catch (JSONException e) {
 			log.log(Level.WARNING, e.toString());
-			json_output.put("response", "error");
-			json_output.put("errorMessage", "missing or incorrect type for command");
+			json_output = PutError("missing or incorrect type for command",json_output);
+			try {
+				client.close();
+			} catch (IOException e1) {
+				log.log(Level.SEVERE, e1.toString());
+				e1.printStackTrace();
+			}
 			IsError = true;
 		} catch (IOException e) {
-			log.log(Level.SEVERE, e.toString());
+			log.log(Level.WARNING, e.toString());
 			IsError = true;
+			try {
+				client.close();
+			} catch (IOException e1) {
+				log.log(Level.SEVERE, e1.toString());
+			}
 			return;
+
 		}
 
 		// check command key
 		if (!json_input.has("command")) {
-			json_output.put("response", "error");
-			json_output.put("errorMessage", "missing for command");
+			json_output = PutError("missing for command",json_output);
 			IsError = true;
 		}
 
@@ -862,7 +979,7 @@ public class Server {
 				}
 
 				else if (current_cmd.equals("EXCHANGE"))
-					json_output = exchange(json_input);
+					json_output = exchange(json_input, true);
 				else {
 					json_output.put("response", "error");
 					json_output.put("errorMessage", "invalid command");
@@ -877,6 +994,78 @@ public class Server {
 				// TODO Auto-generated catch block
 				log.log(Level.SEVERE, e.toString());
 			}
+		} else {
+			log.log(Level.SEVERE, "error in processing ");
+		}
+	}
+
+	private static void serveClient(Socket client, Logger log) {
+		JSONObject json_output = new JSONObject();
+		DataInputStream input = null;
+		JSONObject json_input = null;
+		Boolean IsError = false;
+		// check JSON
+		try {
+			input = new DataInputStream(client.getInputStream());
+			json_input = new JSONObject(input.readUTF());
+		} catch (JSONException e) {
+			log.log(Level.WARNING, e.toString());
+			json_output.put("response", "error");
+			json_output.put("errorMessage", "missing or incorrect type for command");
+			IsError = true;
+		} catch (IOException e) {
+			log.log(Level.SEVERE, e.toString());
+			IsError = true;
+			return;
+		}
+
+		// check command key
+		if (!json_input.has("command")) {
+			json_output.put("response", "error");
+			json_output.put("errorMessage", "missing for command");
+			log.log(Level.WARNING, "cannot get command");
+			IsError = true;
+		}
+
+		if (!IsError) {
+			DataOutputStream output = null;
+			try {
+				output = new DataOutputStream(client.getOutputStream());
+				log.log(Level.INFO, "[received]:" + json_input);
+				String current_cmd = json_input.get("command").toString();
+				Boolean IsQueryorFetch = false;
+				if (current_cmd.equals("PUBLISH"))
+					json_output = publish(json_input);
+				else if (current_cmd.equals("REMOVE"))
+					json_output = remove(json_input);
+				else if (current_cmd.equals("SHARE"))
+					json_output = share(json_input);
+				else if (current_cmd.equals("QUERY")) {
+					// query(json_input, clientSocket);
+					IsQueryorFetch = true;
+				} else if (current_cmd.equals("FETCH")) {
+					// fetch(json_input, clientSocket);
+					IsQueryorFetch = true;
+				}
+
+				else if (current_cmd.equals("EXCHANGE"))
+					json_output = exchange(json_input, false);
+				else {
+					json_output.put("response", "error");
+					json_output.put("errorMessage", "invalid command");
+				}
+				if (!IsQueryorFetch) {
+					log.log(Level.INFO, "[sent]:" + json_output.toString());
+					output.writeUTF(json_output.toString());
+					output.flush();
+					client.close();
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				log.log(Level.SEVERE, e.toString());
+			}
+		} else {
+
 		}
 	}
 
@@ -904,14 +1093,12 @@ public class Server {
 				JSONObject randomServer = ServerList.getJSONObject(randomIndex);
 				String ip = randomServer.getString("hostname");
 				int port = randomServer.getInt("port");
-
 				try {
-					SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
-					SSLSocket socket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
+					SocketFactory socketfactory = (SocketFactory) SocketFactory.getDefault();
+					Socket socket = (Socket) socketfactory.createSocket(ip, port);
 					DataInputStream input = new DataInputStream(socket.getInputStream());
 					DataOutputStream output = new DataOutputStream(socket.getOutputStream());
 					JSONObject json_output = new JSONObject();
-
 					json_output.put("command", "EXCHANGE");
 					json_output.put("serverList", ServerList);
 					output.writeUTF(json_output.toString());
@@ -943,6 +1130,66 @@ public class Server {
 					// TODO Auto-generated catch block
 					log.log(Level.WARNING, "InterruptedException:" + e.toString());
 				}
+
+			}
+			try {
+				Thread.sleep(cli * 1000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				log.log(Level.SEVERE, "autoExchange sleep failed" + e.toString());
+			}
+		}
+	}
+
+	public static void autoSSLExchange(int cli) {
+		while (true) {
+			log.log(Level.INFO, "length of serverlist " + ServerList.length());
+			if (ServerList.length() > 0) {
+
+				String message = "";
+				Random random = new Random();
+				int randomIndex = random.nextInt(ServerList.length());
+				JSONObject randomServer = SSLServerList.getJSONObject(randomIndex);
+				String ip = randomServer.getString("hostname");
+				int port = randomServer.getInt("port");
+				try {
+					SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+					SSLSocket socket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
+					DataInputStream input = new DataInputStream(socket.getInputStream());
+					DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+					JSONObject json_output = new JSONObject();
+					json_output.put("command", "EXCHANGE");
+					json_output.put("serverList", ServerList);
+					output.writeUTF(json_output.toString());
+					output.flush();
+					log.log(Level.INFO, "[sslsent]:" + json_output.toString());
+					for (int i = 0; i < 100; i++) {
+						if (input.available() > 0) {
+							message = input.readUTF();
+							log.log(Level.INFO, "[sslreceived]:" + message);
+							break;
+						}
+						Thread.sleep(100);
+					}
+					socket.close();
+					if (!message.equals("{\"response\":\"success\"}")) {
+						ServerList.remove(randomIndex);
+						log.log(Level.INFO, ip + port + " removed from serverlist");
+						socket.close();
+					}
+				} catch (UnknownHostException e) {
+					ServerList.remove(randomIndex);
+					log.log(Level.INFO, ip + port + " removed from serverlist");
+					log.log(Level.WARNING, "UnknownHostException:" + e.toString());
+				} catch (IOException e) {
+					ServerList.remove(randomIndex);
+					log.log(Level.INFO, ip + port + " removed from serverlist");
+					log.log(Level.WARNING, "IOException:" + e.toString());
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					log.log(Level.WARNING, "InterruptedException:" + e.toString());
+				}
+
 			}
 			try {
 				Thread.sleep(cli * 1000);

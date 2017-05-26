@@ -1,14 +1,14 @@
 #Fat Jar Configuration File
-#Sat Apr 29 18:24:40 AEST 2017
+#Fri May 26 14:37:05 AEST 2017
 onejar.license.required=false
 manifest.classpath=
 manifest.removesigners=true
 onejar.checkbox=false
-jarname=ezshare.jar
+jarname=D\:\\ezshare.jar
 manifest.mergeall=true
 manifest.mainclass=
 manifest.file=<createnew>
-jarname.isextern=false
-onejar.expand=
+jarname.isextern=true
+onejar.expand=D\:\\Projects\\EZShare\\EZShare\\ezshare.jar
 excludes=
-includes=
+includes=<inc|EZShare/serverKeystore>;<inc|EZShare/clientKeystore>

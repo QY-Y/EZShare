@@ -16,9 +16,6 @@ import org.json.*;
 
 public class cliclient {
 
-	
-	
-	
 	private String[] args = null;
 	private Options options = new Options();
 
@@ -35,6 +32,7 @@ public class cliclient {
 		final Option description = Option.builder("d").longOpt("description").desc("resource description").hasArg()
 				.build();
 		options.addOption(description);
+		options.addOption("sec", "secure", false, "use secure connection");
 
 		options.addOption("de", "debug", false, "print debug information");
 
@@ -70,9 +68,8 @@ public class cliclient {
 		final Option secret = Option.builder("s").longOpt("secret").desc("secret").hasArg().build();
 		options.addOption(secret);
 
-		
-		final Option servers = Option.builder("se").longOpt("servers")
-				.desc("server list, host1:port1,host2:port2,...").hasArg().build();
+		final Option servers = Option.builder("se").longOpt("servers").desc("server list, host1:port1,host2:port2,...")
+				.hasArg().build();
 		options.addOption(servers);
 
 		options.addOption("sh", "share", false, "share flag");
@@ -80,6 +77,8 @@ public class cliclient {
 		final Option tags = Option.builder("t").longOpt("tags").desc("resource tags, tag1,tag2,tag3,...").hasArg()
 				.build();
 		options.addOption(tags);
+		final Option sp = Option.builder("sp").longOpt("sport").desc("secure port").hasArg().build();
+		options.addOption(sp);
 
 		final Option uri = Option.builder("u").longOpt("uri").desc("URI").hasArg().build();
 		options.addOption(uri);
@@ -96,9 +95,11 @@ public class cliclient {
 			// Set default values
 			output.put("host", "localhost");
 			output.put("port", "3000");
+
 			output.put("secret", "");
 			output.put("channel", "");
 			output.put("owner", "");
+			output.put("secure", false);
 			//
 			if (cmd.hasOption("debug")) {
 				output.put("debug", true);
@@ -106,6 +107,10 @@ public class cliclient {
 			} else {
 				output.put("debug", false);
 				log.setLevel(Level.WARNING);
+			}
+			if (cmd.hasOption("secure")) {
+				output.put("secure", true);
+				output.put("port", "3781");
 			}
 
 			Option[] args = cmd.getOptions();

@@ -1,9 +1,12 @@
 package EZShare;
 
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -14,34 +17,65 @@ import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.OutputStream;
 
 import CLI.cliclient;
 
 public class Client {
 	private static final Logger log = Logger.getLogger(Client.class.getName());
 	private static int MAXFILESIZE = 20 * 1024 * 1024;
+
+	public static SSLSocket sslsocket(String ip, int port) {
+//		String path = Thread.currentThread().
+//				getContextClassLoader().getResource("EZShare/client.jks").getPath();
+//		System.setProperty("javax.net.ssl.trustStore", path);
+		System.setProperty("javax.net.ssl.trustStore", "clientKeyStore/client.jks");
+		
+		SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+		try {
+			SSLSocket socket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
+			return socket;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			log.log(Level.SEVERE, e.toString());
+			System.exit(0);
+			e.printStackTrace();
+			return null;
+		}
+	}
+
 	public static void main(String[] args) {
 		JSONObject json_args = new cliclient(args).parse(log);
 		if (json_args.getBoolean("debug"))
 			log.setLevel(Level.ALL);
 		else
-			
-			
 			log.setLevel(Level.INFO);
 		String ip = json_args.getString("host");
 		int port = json_args.getInt("port");
+		Boolean sslflag = json_args.getBoolean("secure");
 		log.log(Level.WARNING, "connecting to " + ip + ":" + port);
 		try {
-			
-			System.setProperty("javax.net.ssl.trustStore", "clientKeyStore/client.jks");
-			SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
-			SSLSocket socket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
-			
-			// Output and Input Stream sunrise.cis.unimelb.edu.au:3780
-			DataInputStream input = new DataInputStream(socket.getInputStream());
-			DataOutputStream output = new DataOutputStream(socket.getOutputStream());
-			JSONObject json_output = new JSONObject();
+			Socket socket = null;
+			SSLSocket sslsocket = null;
+			DataInputStream input = null;
+			DataOutputStream output = null;
 
+			if (sslflag) {
+				sslsocket = sslsocket(ip, port);
+				input = new DataInputStream(sslsocket.getInputStream());
+				output = new DataOutputStream(sslsocket.getOutputStream());
+
+			} else {
+				socket = new Socket(ip, port);
+				input = new DataInputStream(socket.getInputStream());
+				output = new DataOutputStream(socket.getOutputStream());
+			}
+
+			// Output and Input Stream sunrise.cis.unimelb.edu.au:3780
+
+			JSONObject json_output = new JSONObject();
 			// call functions according to input args
 			if (json_args.has("exchange")) {
 				json_output = exchange(json_args);
@@ -55,11 +89,18 @@ public class Client {
 				json_output = remove(json_args);
 			} else if (json_args.has("share")) {
 				json_output = share(json_args);
-			} else
-				;
-			output.writeUTF(json_output.toString());
-			output.flush();
-			log.log(Level.INFO, "[sent]:" + json_output.toString());
+			}
+			if (sslflag) {
+				OutputStream outputstream = sslsocket.getOutputStream();
+				OutputStreamWriter outputstreamwriter = new OutputStreamWriter(outputstream);
+				BufferedWriter bufferedwriter = new BufferedWriter(outputstreamwriter);
+				bufferedwriter.write(json_output.toString());
+				log.log(Level.INFO, "[sent]:" + json_output.toString());
+			} else {
+				output.writeUTF(json_output.toString());
+				output.flush();
+				log.log(Level.INFO, "[sent]:" + json_output.toString());
+			}
 
 			if (json_args.has("fetch")) {
 				// Print out results received from server..
@@ -123,7 +164,7 @@ public class Client {
 						}
 					}
 				}
-			} else if(json_args.has("query")){
+			} else if (json_args.has("query")) {
 				int k = 0;
 				while (k < 20) {
 					if (input.available() > 0) {
@@ -138,33 +179,34 @@ public class Client {
 					if (input.available() > 0) {
 						String message = input.readUTF();
 						log.log(Level.INFO, "[received]:" + message);
-						 break;
+						break;
 					}
 					Thread.sleep(100);
 				}
-
 			}
 		} catch (UnknownHostException e) {
 			log.log(Level.WARNING, e.toString());
+			e.printStackTrace();
 		} catch (IOException e) {
 			log.log(Level.WARNING, e.toString());
+			e.printStackTrace();
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			log.log(Level.WARNING, e.toString());
+			e.printStackTrace();
 		}
 	}
 
 	private static JSONObject publish(JSONObject input) {
 		JSONObject output = new JSONObject();
 		String[] tags = {};
-
 		// initialise
 		String publish_name = "";
 		String publish_description = "";
 		String publish_uri = "";
 		String publish_channel = "";
 		String publish_owner = "";
-		String publish_ezserver = null;
+		String publish_ezserver = "";
 
 		if (input.has("name"))
 			publish_name = input.getString("name");
@@ -172,7 +214,7 @@ public class Client {
 			tags = input.getString("tags").split(",");
 		if (input.has("description"))
 			publish_description = input.getString("description");
-		if (input.has("uri")){
+		if (input.has("uri")) {
 			publish_uri = input.getString("uri");
 		}
 		if (input.has("channel"))

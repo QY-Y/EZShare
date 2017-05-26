@@ -5,9 +5,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStreamReader;
+
 import java.net.URI;
 
 public class resource {
