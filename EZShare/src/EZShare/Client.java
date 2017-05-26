@@ -1,11 +1,13 @@
 package EZShare;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.net.Socket;
@@ -17,8 +19,6 @@ import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.*;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.OutputStream;
 
 import CLI.cliclient;
@@ -28,11 +28,8 @@ public class Client {
 	private static int MAXFILESIZE = 20 * 1024 * 1024;
 
 	public static SSLSocket sslsocket(String ip, int port) {
-//		String path = Thread.currentThread().
-//				getContextClassLoader().getResource("EZShare/client.jks").getPath();
-//		System.setProperty("javax.net.ssl.trustStore", path);
-		System.setProperty("javax.net.ssl.trustStore", "clientKeyStore/client.jks");
-		
+		String path = Thread.currentThread().getContextClassLoader().getResource("EZShare/client.jks").getPath();
+		System.setProperty("javax.net.ssl.trustStore", path);
 		SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
 		try {
 			SSLSocket socket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
@@ -55,7 +52,7 @@ public class Client {
 		String ip = json_args.getString("host");
 		int port = json_args.getInt("port");
 		Boolean sslflag = json_args.getBoolean("secure");
-		log.log(Level.WARNING, "connecting to " + ip + ":" + port);
+		log.log(Level.WARNING, "connecting to " + ip + ":" + port + ".secure:" + sslflag.toString());
 		try {
 			Socket socket = null;
 			SSLSocket sslsocket = null;
@@ -64,8 +61,6 @@ public class Client {
 
 			if (sslflag) {
 				sslsocket = sslsocket(ip, port);
-				input = new DataInputStream(sslsocket.getInputStream());
-				output = new DataOutputStream(sslsocket.getOutputStream());
 
 			} else {
 				socket = new Socket(ip, port);
@@ -95,6 +90,7 @@ public class Client {
 				OutputStreamWriter outputstreamwriter = new OutputStreamWriter(outputstream);
 				BufferedWriter bufferedwriter = new BufferedWriter(outputstreamwriter);
 				bufferedwriter.write(json_output.toString());
+				bufferedwriter.flush();
 				log.log(Level.INFO, "[sent]:" + json_output.toString());
 			} else {
 				output.writeUTF(json_output.toString());
@@ -175,13 +171,32 @@ public class Client {
 					k++;
 				}
 			} else {
-				while (true) {
-					if (input.available() > 0) {
-						String message = input.readUTF();
-						log.log(Level.INFO, "[received]:" + message);
-						break;
+				if (sslflag) {
+					while (true) {
+						try {
+							InputStream inputstream = sslsocket.getInputStream();
+							InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
+							BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
+							String string = bufferedreader.readLine();
+							if (string != null) {
+								System.out.println(string);
+								log.log(Level.SEVERE, string);
+								break;
+							} else {
+								Thread.sleep(200);
+							}
+						} catch (IOException e) {
+						}
 					}
-					Thread.sleep(100);
+				} else {
+					while (input.available() > 0) {
+						if (true) {
+							String message = input.readUTF();
+							log.log(Level.INFO, "[received]:" + message);
+							break;
+						}
+						Thread.sleep(100);
+					}
 				}
 			}
 		} catch (UnknownHostException e) {

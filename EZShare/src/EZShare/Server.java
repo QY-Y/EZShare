@@ -1,12 +1,15 @@
 package EZShare;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 
 import javax.net.ServerSocketFactory;
@@ -73,11 +76,8 @@ public class Server {
 
 	public static SSLServerSocket linsten_sslsocket(int port) {
 		// return a SSLServerSocket if success, or null if failed
-		 String path = Thread.currentThread().
-		 getContextClassLoader().getResource("EZShare/server.jks").getPath();
-		 System.setProperty("javax.net.ssl.keyStore", path);
-
-//		System.setProperty("javax.net.ssl.keyStore", "serverKeystore/server.jks");
+		String path = Thread.currentThread().getContextClassLoader().getResource("EZShare/server.jks").getPath();
+		System.setProperty("javax.net.ssl.keyStore", path);
 		System.setProperty("javax.net.ssl.keyStorePassword", "sdfjkl");
 		try {
 			SSLServerSocketFactory sslserversocketfactory = (SSLServerSocketFactory) SSLServerSocketFactory
@@ -159,14 +159,13 @@ public class Server {
 		ExecutorService SSLpool = Executors.newFixedThreadPool(MAXthread / 2);
 		while (true) {
 			try {
-				serversocket.setNeedClientAuth(true);
 				SSLSocket client = (SSLSocket) serversocket.accept();
 				String client_address = client.getInetAddress().toString();
 				if (!BlackList.has(client_address)) {
 					BlackList.put(client_address, System.currentTimeMillis());
 					// Start a new thread for a connection
-					// SSLpool.execute(new SSLClientHandler(client, log));
-					Thread t = new Thread(() -> sslserveClient(client));
+					 SSLpool.execute(new SSLClientHandler(client, log));
+					Thread t = new Thread(() -> sslserveClient(client, log));
 					t.setDaemon(true);
 					t.start();
 				} else {
@@ -915,25 +914,26 @@ public class Server {
 
 	}
 
-	private static void sslserveClient(SSLSocket client) {
+	private static void sslserveClient(SSLSocket sslclient, Logger log) {
 		JSONObject json_output = new JSONObject();
-		SSLSocket clientSocket = client;
-		InputStream input = null;
 		JSONObject json_input = null;
 		Boolean IsError = false;
+		String string = null;
 		// check JSON
 		try {
-			input = client.getInputStream();
-			InputStreamReader inputstreamreader = new InputStreamReader(input);
-			BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
-			input = new DataInputStream(clientSocket.getInputStream());
-			json_input = new JSONObject(input.read());
+			BufferedReader in = new BufferedReader(new InputStreamReader(sslclient.getInputStream()));
+			//Read input from the client and print it to the screen
+			while ((string = in.readLine()) != null) {
+				log.log(Level.INFO, "[received]: "+string);
+			}
+			json_input = new JSONObject(string);
+			log.log(Level.SEVERE, json_input.toString());
 
 		} catch (JSONException e) {
 			log.log(Level.WARNING, e.toString());
-			json_output = PutError("missing or incorrect type for command",json_output);
+			json_output = PutError("missing or incorrect type for command", json_output);
 			try {
-				client.close();
+				sslclient.close();
 			} catch (IOException e1) {
 				log.log(Level.SEVERE, e1.toString());
 				e1.printStackTrace();
@@ -943,25 +943,21 @@ public class Server {
 			log.log(Level.WARNING, e.toString());
 			IsError = true;
 			try {
-				client.close();
+				sslclient.close();
 			} catch (IOException e1) {
 				log.log(Level.SEVERE, e1.toString());
 			}
-			return;
-
 		}
 
 		// check command key
 		if (!json_input.has("command")) {
-			json_output = PutError("missing for command",json_output);
+			json_output = PutError("missing for command", json_output);
 			IsError = true;
 		}
 
 		if (!IsError) {
-			DataOutputStream output = null;
 			try {
-				output = new DataOutputStream(clientSocket.getOutputStream());
-				log.log(Level.INFO, "[received]:" + json_input);
+				BufferedWriter output = new BufferedWriter(new OutputStreamWriter(sslclient.getOutputStream()));
 				String current_cmd = json_input.get("command").toString();
 				Boolean IsQueryorFetch = false;
 				if (current_cmd.equals("PUBLISH"))
@@ -971,10 +967,10 @@ public class Server {
 				else if (current_cmd.equals("SHARE"))
 					json_output = share(json_input);
 				else if (current_cmd.equals("QUERY")) {
-					query(json_input, clientSocket);
+					query(json_input, sslclient);
 					IsQueryorFetch = true;
 				} else if (current_cmd.equals("FETCH")) {
-					fetch(json_input, clientSocket);
+					fetch(json_input, sslclient);
 					IsQueryorFetch = true;
 				}
 
@@ -985,10 +981,11 @@ public class Server {
 					json_output.put("errorMessage", "invalid command");
 				}
 				if (!IsQueryorFetch) {
-					log.log(Level.INFO, "[sent]:" + json_output.toString());
-					output.writeUTF(json_output.toString());
+					
+					output.write(json_output.toString());
 					output.flush();
-					client.close();
+					log.log(Level.INFO, "[sent]:" + json_output.toString());
+					sslclient.close();
 				}
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
