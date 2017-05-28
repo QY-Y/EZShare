@@ -59,11 +59,10 @@ public class cliclient {
 		options.addOption("pu", "publish", false, "publish flag");
 
 		options.addOption("q", "query", false, "query flag");
+		
+		options.addOption("su", "subscribe", false, "subscribe flag");
 
 		options.addOption("r", "remove", false, "remove flag");
-
-		final Option relay = Option.builder("re").longOpt("relay").desc("relay ").hasArg().build();
-		options.addOption(relay);
 
 		final Option secret = Option.builder("s").longOpt("secret").desc("secret").hasArg().build();
 		options.addOption(secret);

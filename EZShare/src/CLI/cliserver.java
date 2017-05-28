@@ -76,9 +76,7 @@ public class cliserver {
 
 			return output;
 
-		} catch (
-
-				ParseException | UnknownHostException e) {
+		} catch (Exception e) {
 			log.log(Level.SEVERE, "Failed to parse comand line properties", e.toString());
 			help();
 			System.exit(0);

@@ -11,11 +11,17 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.*;
@@ -26,13 +32,27 @@ import CLI.cliclient;
 public class Client {
 	private static final Logger log = Logger.getLogger(Client.class.getName());
 	private static int MAXFILESIZE = 20 * 1024 * 1024;
+	private static String id = "";
+	private static Socket socket = null;
+	private static SSLSocket sslsocket = null;
 
 	public static SSLSocket sslsocket(String ip, int port) {
-		String path = Thread.currentThread().getContextClassLoader().getResource("EZShare/client.jks").getPath();
-		System.setProperty("javax.net.ssl.trustStore", path);
+		// return a SSLServerSocket if success, or null if failed
+		Path temp = null;
+		try {
+			temp = Files.createTempFile("client", ".jks1");
+			Files.copy(Thread.currentThread().getContextClassLoader().getResourceAsStream("EZShare/client.jks"), temp,
+					StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException e2) {
+			// TODO Auto-generated catch block
+			e2.printStackTrace();
+		}
+		System.setProperty("javax.net.ssl.trustStore", temp.toString());
 		SSLSocketFactory sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
 		try {
 			SSLSocket socket = (SSLSocket) sslsocketfactory.createSocket(ip, port);
+			socket.setKeepAlive(true);
+			socket.setSoTimeout(24 * 3600 * 1000);
 			return socket;
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -40,6 +60,137 @@ public class Client {
 			System.exit(0);
 			e.printStackTrace();
 			return null;
+		}
+	}
+
+	private static JSONObject subscribe(JSONObject input) {
+		JSONObject output = new JSONObject();
+		JSONObject resourceTemplate = new JSONObject();
+
+		String name = "";
+		boolean relay = true;
+		String[] tagsArray = null;
+		ArrayList<String> tagsList = null;
+		String description = "";
+		String uri = "";
+		String channel = "";
+		String owner = "";
+		String ezserver = null;
+		String uuid = UUID.randomUUID().toString();
+
+		if (input.has("name")) {
+			name = input.getString("name");
+		}
+		if (input.has("relay")) {
+			relay = input.getBoolean("relay");
+		}
+		if (input.has("tags")) {
+			tagsArray = input.getString("tags").split(",");
+			tagsList = new ArrayList<>(Arrays.asList(tagsArray));
+		}
+		if (input.has("description")) {
+			description = input.getString("description");
+		}
+		if (input.has("uri")) {
+			uri = input.getString("uri");
+		}
+		if (input.has("channel")) {
+			channel = input.getString("channel");
+		}
+		if (input.has("owner")) {
+			owner = input.getString("owner");
+		}
+		if (input.has("ezserver")) {
+			ezserver = input.getString("ezserver");
+		}
+
+		// output
+		output.put("command", "SUBSCRIBE");
+		output.put("relay", relay);
+		output.put("id", uuid);
+		resourceTemplate.put("name", name);
+		resourceTemplate.put("tags", tagsList);
+		resourceTemplate.put("description", description);
+		resourceTemplate.put("uri", uri);
+		resourceTemplate.put("channel", channel);
+		resourceTemplate.put("owner", owner);
+		resourceTemplate.put("ezserver", ezserver);
+		output.put("resourceTemplate", resourceTemplate);
+		return output;
+	}
+
+	private static void sendsocketssl(SSLSocket client, String msg) {
+		try {
+			OutputStream outputstream = client.getOutputStream();
+			OutputStreamWriter outputstreamwriter = new OutputStreamWriter(outputstream);
+			BufferedWriter bufferedwriter = new BufferedWriter(outputstreamwriter);
+			bufferedwriter.write(msg + "\n");
+			bufferedwriter.flush();
+			log.log(Level.INFO, "[sent]:" + msg);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			log.log(Level.WARNING, "[sending failed:]:" + msg);
+			e.printStackTrace();
+		}
+	}
+
+	public static void exit_trigger(String id, SSLSocket sslsocket, Socket client, Boolean sslflag) {
+		System.out.println("press enter to exit");
+		while (true) {
+			try {
+				if (System.in.read() == '\n') {
+					System.out.println("[enter] pressed, exiting!");
+					JSONObject output = new JSONObject();
+					output.put("command", "UNSUBSCRIBE");
+					output.put("id", id);
+					if (sslflag) {
+						sendsocketssl(sslsocket, output.toString());
+					} else {
+						sendsocket(client, output.toString());
+					}
+					System.exit(0);
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+
+	}
+
+	private static void sendsocket(Socket client, String string) {
+		DataOutputStream output;
+
+		try {
+			output = new DataOutputStream(socket.getOutputStream());
+			output.writeUTF(string);
+			output.flush();
+			log.log(Level.INFO, "[sent]:" + string);
+		}
+
+		catch (IOException e) {
+			log.log(Level.INFO, "[sent failed]:" + string);
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	private static void socketsendssl(SSLSocket client, String msg) {
+		try {
+			OutputStream outputstream = client.getOutputStream();
+			OutputStreamWriter outputstreamwriter = new OutputStreamWriter(outputstream);
+			BufferedWriter bufferedwriter = new BufferedWriter(outputstreamwriter);
+			bufferedwriter.write(msg + "\n");
+			bufferedwriter.flush();
+			log.log(Level.INFO, "[sent]:" + msg);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			log.log(Level.WARNING, "[sending failed:]:" + msg);
+			e.printStackTrace();
 		}
 	}
 
@@ -52,10 +203,11 @@ public class Client {
 		String ip = json_args.getString("host");
 		int port = json_args.getInt("port");
 		Boolean sslflag = json_args.getBoolean("secure");
+		json_args.put("realay", true);
+
 		log.log(Level.WARNING, "connecting to " + ip + ":" + port + ".secure:" + sslflag.toString());
 		try {
-			Socket socket = null;
-			SSLSocket sslsocket = null;
+
 			DataInputStream input = null;
 			DataOutputStream output = null;
 
@@ -80,24 +232,21 @@ public class Client {
 				json_output = publish(json_args);
 			} else if (json_args.has("query")) {
 				json_output = query(json_args);
+			} else if (json_args.has("subscribe")) {
+				json_output = subscribe(json_args);
+				id = json_output.getString("id");
 			} else if (json_args.has("remove")) {
 				json_output = remove(json_args);
 			} else if (json_args.has("share")) {
 				json_output = share(json_args);
 			}
 			if (sslflag) {
-				OutputStream outputstream = sslsocket.getOutputStream();
-				OutputStreamWriter outputstreamwriter = new OutputStreamWriter(outputstream);
-				BufferedWriter bufferedwriter = new BufferedWriter(outputstreamwriter);
-				bufferedwriter.write(json_output.toString());
-				bufferedwriter.flush();
-				log.log(Level.INFO, "[sent]:" + json_output.toString());
+				socketsendssl(sslsocket, json_output.toString());
 			} else {
 				output.writeUTF(json_output.toString());
 				output.flush();
 				log.log(Level.INFO, "[sent]:" + json_output.toString());
 			}
-
 			if (json_args.has("fetch")) {
 				// Print out results received from server..
 				boolean startDownload = false;
@@ -129,7 +278,7 @@ public class Client {
 
 								RandomAccessFile downloadingFile = new RandomAccessFile(fileLocation, "rw");
 								log.log(Level.INFO, "start download");
-								int fileSize = (int) command.get("resourceSize");
+								int fileSize = Integer.valueOf((String) command.get("resourceSize"));
 
 								byte[] receiveBuffer = new byte[MAXFILESIZE];
 								int num;
@@ -170,31 +319,55 @@ public class Client {
 					Thread.sleep(100);
 					k++;
 				}
-			} else {
-				if (sslflag) {
+
+			} else if (json_args.has("subscribe")) {
+				Thread exit = new Thread(() -> exit_trigger(id, sslsocket, socket, sslflag));
+				exit.setDaemon(true);
+				exit.start();
+				if (json_args.getBoolean("secure")) {
+					BufferedReader in = new BufferedReader(new InputStreamReader(sslsocket.getInputStream()));
+					// Read input from the client and print it to the screen
+					String string = null;
 					while (true) {
-						try {
-							InputStream inputstream = sslsocket.getInputStream();
-							InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
-							BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
-							String string = bufferedreader.readLine();
-							if (string != null) {
-								System.out.println(string);
-								log.log(Level.SEVERE, string);
-								break;
-							} else {
-								Thread.sleep(200);
-							}
-						} catch (IOException e) {
+						string = in.readLine();
+						if (string != null) {
+							log.log(Level.INFO, "[received]: " + string);
 						}
 					}
 				} else {
-					while (input.available() > 0) {
-						if (true) {
+					while (true) {
+						if (input.available() > 0) {
 							String message = input.readUTF();
 							log.log(Level.INFO, "[received]:" + message);
-							break;
+							System.out.println(message);
+							System.out.println("press [enter] to exit");
 						}
+					}
+				}
+			} else if (sslflag) {
+				while (true) {
+					try {
+						InputStream inputstream = sslsocket.getInputStream();
+						InputStreamReader inputstreamreader = new InputStreamReader(inputstream);
+						BufferedReader bufferedreader = new BufferedReader(inputstreamreader);
+						String string = bufferedreader.readLine();
+						if (string != null) {
+							log.log(Level.INFO, "[received]:" + string);
+							break;
+						} else {
+							Thread.sleep(200);
+						}
+					} catch (IOException e) {
+					}
+				}
+			} else {
+				while (true) {
+					if (input.available() > 0) {
+						log.log(Level.INFO, "receving:");
+						String message = input.readUTF();
+						log.log(Level.INFO, "[received]:" + message);
+						break;
+					} else {
 						Thread.sleep(100);
 					}
 				}
@@ -222,11 +395,14 @@ public class Client {
 		String publish_channel = "";
 		String publish_owner = "";
 		String publish_ezserver = "";
-
+		ArrayList tagsList = null;
+		String[] tagsArray = null;
 		if (input.has("name"))
 			publish_name = input.getString("name");
-		if (input.has("tags"))
-			tags = input.getString("tags").split(",");
+		if (input.has("tags")) {
+			tagsArray = input.getString("tags").split(",");
+			tagsList = new ArrayList<>(Arrays.asList(tagsArray));
+		}
 		if (input.has("description"))
 			publish_description = input.getString("description");
 		if (input.has("uri")) {
@@ -243,7 +419,7 @@ public class Client {
 		JSONObject resource = new JSONObject();
 		output.put("command", "PUBLISH");
 		resource.put("name", publish_name);
-		resource.put("tags", tags);
+		resource.put("tags", tagsList);
 		resource.put("description", publish_description);
 		resource.put("uri", publish_uri);
 		resource.put("channel", publish_channel);
@@ -258,7 +434,8 @@ public class Client {
 		JSONObject output = new JSONObject();
 		// initialise
 		String remove_name = "";
-		String[] remove_tags = null;
+		String[] tagsArray = null;
+		ArrayList tagsList = null;
 		String remove_description = "";
 		String remove_uri = "";
 		String remove_channel = "";
@@ -267,8 +444,10 @@ public class Client {
 
 		if (input.has("name"))
 			remove_name = input.getString("name");
-		if (input.has("tags"))
-			remove_tags = input.getString("tags").split(",");
+		if (input.has("tags")) {
+			tagsArray = input.getString("tags").split(",");
+			tagsList = new ArrayList<>(Arrays.asList(tagsArray));
+		}
 		if (input.has("description"))
 			remove_description = input.getString("description");
 		if (input.has("uri"))
@@ -283,7 +462,7 @@ public class Client {
 		JSONObject resource = new JSONObject();
 		output.put("command", "REMOVE");
 		resource.put("name", remove_name);
-		resource.put("tags", remove_tags);
+		resource.put("tags", tagsList);
 		resource.put("description", remove_description);
 		resource.put("uri", remove_uri);
 		resource.put("channel", remove_channel);
@@ -311,8 +490,9 @@ public class Client {
 			if (input.has("ezserver"))
 				resource.put("ezserver", input.getString("ezserver"));
 			if (input.has("tags")) {
-				String[] tags = input.getString("tags").split(",");
-				resource.put("tags", tags);
+				String[] tagsArray = input.getString("tags").split(",");
+				ArrayList tagsList = new ArrayList<>(Arrays.asList(tagsArray));
+				output.put("tags", tagsList);
 			}
 			output.put("resource", resource);
 		} catch (JSONException e) {
@@ -346,7 +526,7 @@ public class Client {
 		}
 		if (input.has("tags")) {
 			tagsArray = input.getString("tags").split(",");
-			tagsList = (ArrayList<String>) Arrays.asList(tagsArray);
+			tagsList = new ArrayList<>(Arrays.asList(tagsArray));
 		}
 		if (input.has("description")) {
 			query_description = input.getString("description");
@@ -397,7 +577,7 @@ public class Client {
 		}
 		if (input.has("tags")) {
 			tagsArray = input.getString("tags").split(",");
-			tagsList = (ArrayList<String>) Arrays.asList(tagsArray);
+			tagsList = new ArrayList<>(Arrays.asList(tagsArray));
 		}
 		if (input.has("description")) {
 			fetch_description = input.getString("description");

@@ -162,7 +162,7 @@ public class resource {
 		return EZserver;
 	}
 
-	public String[] getKey() {
+	public String[] getKey() throws Exception {
 		// return primary key String list getowner channel uri
 		try {
 			String[] tmp = { getOwner(), getChannel(), getURI() };
