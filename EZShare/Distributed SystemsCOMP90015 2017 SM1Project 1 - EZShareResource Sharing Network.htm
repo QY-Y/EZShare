@@ -1,0 +1,3307 @@
+<!DOCTYPE html>
+<!--
+  Copyright 2010 Google Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  Original slides: Marcin Wichary (mwichary@google.com)
+  Modifications: Ernest Delgado (ernestd@google.com)
+                 Alex Russell (slightlyoff@chromium.org)
+
+  landslide modifications: Adam Zapletal (adamzap@gmail.com)
+                           Nicolas Perriault (nperriault@gmail.com)
+-->
+<html><head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Distributed Systems<br>COMP90015 2017 SM1<br>Project 1 - EZShare<br>Resource Sharing Network</title>
+    <!-- Styles -->
+    
+    <style type="text/css" media="print">
+      * {
+    margin: 0;
+    padding: 0;
+}
+
+@page {
+    size: landscape;
+}
+
+body {
+    font: 100% "Lucida Grande", "Trebuchet MS", Verdana, sans-serif;
+    padding: 0;
+    margin: 0;
+}
+
+div.slide {
+    min-width: 800px;
+    min-height: 600px;
+    padding: 1em;
+    overflow: hidden;
+    page-break-after: always;
+    border: 1px solid black;
+    border-radius: 20px;
+}
+
+div.slide div.inner {
+    width: 800px;
+    height: 600px;
+    margin: auto;
+    display: table-cell;
+}
+
+h1 {
+    font-size: 2.4em;
+}
+
+h2 {
+    font-size: 1.4em;
+}
+
+h3 {
+    margin: 1em 0;
+}
+
+ul {
+    margin: 0;
+    padding: 0;
+}
+
+p, li, pre {
+    margin: 1em 0;
+}
+
+li {
+    margin-left: 2em;
+}
+
+a {
+    color: #000000;
+}
+
+pre, code {
+    max-width: 800px;
+    background: #eee;
+    font-family: Monaco, monospace;
+    font-size: 90%;
+}
+
+pre {
+    padding: .2em .5em;
+    overflow: hidden;
+    border-radius: .8em;
+}
+
+code {
+    padding: 0 .2em;
+}
+
+.slide header:only-child h1 {
+  line-height: 180%;
+  text-align: center;
+  display: table-cell;
+  vertical-align: middle;
+  height: 600px;
+  width: 800px;
+  font-size: 48px;
+  margin-top:100px;
+  margin-bottom:100px;
+}
+
+#toc, #help, .slide aside, .slide footer, .slide .notes,
+.presenter_notes, #current_presenter_notes, #presenter_note {
+  display: none;
+}
+
+    </style>
+    <style type="text/css" media="screen, projection">
+      body {
+  font: 14px "Lucida Grande", "Trebuchet MS", Verdana, sans-serif;
+  background: #778;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+div.presentation {
+  position: absolute;
+  width: 100%;
+  display: table-cell;
+  vertical-align: middle;
+  height: 100%;
+  background: inherit;
+}
+
+div.presentation > h1 {
+  display: none;
+}
+
+div.slides, body.expose div.slides.nocontext {
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  position: absolute;
+  display: block;
+}
+
+div.slides.nocontext {
+  width: 900px;
+  margin: 0 auto;
+  overflow: hidden;
+  position: relative;
+  left: auto;
+  top: auto;
+}
+
+div.slide {
+  display: inline;
+  position: absolute;
+  overflow: hidden;
+  width: 900px;
+  height: 700px;
+  margin-top: -350px;
+  margin-left: -400px;
+  left: 50%;
+  top: 50%;
+  background: -webkit-gradient(linear, left bottom, left top, from(#bbd), to(#fff));
+  background-color: #eee;
+  background: -moz-linear-gradient(bottom, #bbd, #fff);
+  -webkit-transition: margin 0.25s ease-in-out;
+  -moz-transition: margin 0.25s ease-in-out;
+  -o-transition: margin 0.25s ease-in-out;
+  border-top-left-radius: 20px;
+  -moz-border-radius-topleft: 20px;
+  -webkit-border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  -moz-border-radius-topright: 20px;
+  -webkit-border-top-right-radius: 20px;
+  border-bottom-right-radius: 20px;
+  -moz-border-radius-bottomright: 20px;
+  -webkit-border-bottom-right-radius: 20px;
+  border-bottom-left-radius: 20px;
+  -moz-border-radius-bottomleft: 20px;
+  -webkit-border-bottom-left-radius: 20px;
+}
+
+/* Expose */
+
+body.expose div.slides {
+  float: left;
+  position: relative;
+  overflow: auto;
+  margin-bottom: 10px;
+}
+
+body.expose div.slide {
+  display: block;
+  float: left;
+  position: relative;
+  left: auto !important;
+  top: auto !important;
+  margin: 10px !important;
+  -webkit-transition: none;
+  -moz-transition: none;
+  -o-transition: none;
+  -moz-transform: scale(.33, .33);
+  -moz-transform-origin: 0 0;
+  -webkit-transform: scale(.33, .33);
+  -webkit-transform-origin: 0 0;
+  -o-transform: scale(.33, .33);
+  -o-transform-origin: 0 0;
+  -webkit-transition: none;
+  -moz-transition: none;
+  -o-transition: none;
+  cursor: pointer;
+}
+
+body.expose div.slide:hover {
+  background: -webkit-gradient(linear, left bottom, left top, from(#bdd), to(#fff));
+  background-color: #eee;
+  background: -moz-linear-gradient(bottom, #bdd, #fff);
+}
+
+body.expose .slide-wrapper {
+  float: left;
+  position: relative;
+  margin: .5%;
+  width: 300px;
+  height: 233px;
+}
+
+body.expose .slide footer {
+}
+
+body.expose .slide .inner {
+}
+
+body.expose .slide.far-past,
+body.expose .slide.past,
+body.expose .slide.future,
+body.expose .slide.far-future {
+  margin-left: 0;
+}
+
+body.expose .slide.current {
+  background: -webkit-gradient(linear, left bottom, left top, from(#ddb), to(#fff));
+  background-color: #eee;
+  background: -moz-linear-gradient(bottom, #ddb, #fff);
+  border: 16px solid #fff;
+  -moz-transform: scale(.315, .315);
+  -moz-transform-origin: 0 0;
+  -webkit-transform: scale(.315, .315);
+  -webkit-transform-origin: 0 0;
+  -o-transform: scale(.315, .315);
+  -o-transform-origin: 0 0;
+}
+
+/* Presenter Mode */
+
+body.presenter_view div.slide {
+  display: inline;
+  position: absolute;
+  overflow: hidden;
+  -moz-transform: scale(.5, .5);
+  -moz-transform-origin: 0 0;
+  -webkit-transform: scale(.5, .5);
+  -webkit-transform-origin: 0 0;
+  -o-transform: scale(.5, .5);
+  -o-transform-origin: 0 0;
+    margin-top: -300px;
+}
+
+body.presenter_view .slide.far-past {
+  display: block;
+  margin-left: -1500px;
+}
+
+body.presenter_view .slide.past {
+  display: block;
+  margin-left: -975px;
+}
+
+body.presenter_view .slide.current {
+  display: block;
+  margin-left: -475px;
+  border: 8px solid maroon;
+  z-index: 2;
+}
+
+body.presenter_view .slide.future {
+  display: block;
+  margin-left: 25px;
+  z-index: 1;
+}
+
+body.presenter_view .slide.far-future {
+  display: block;
+  margin-left: 525px;
+}
+
+body.presenter_view div#current_presenter_notes {
+    visibility: visible;
+    display: block;
+    position: absolute;
+    overflow: auto;
+    vertical-align: middle;
+    left: 50%;
+    top: 50%;
+    margin-left: -475px;
+    margin-top: 100px;
+    z-index: 2;
+    width: 950px;
+    border-style: solid;
+    height: 30%;
+    background-color: silver;
+}
+
+body.presenter_view div#current_presenter_notes section {
+  font-family: "Lucida Grande", "Trebuchet MS", Verdana, sans-serif;
+  color: black;
+  text-shadow: rgba(0, 0, 0, 0.2) 0 2px 5px;
+  display: block;
+  overflow: visible;
+    position: relative;
+    background-color: #fffeff;
+    height: 120px;
+    margin-right: 30px;
+    margin-top: 60px;
+    margin-left: 30px;
+    padding-right: 10px;
+    padding-left: 10px;
+    padding-top: 10px;
+}
+
+body.presenter_view div#current_presenter_notes section p {
+    margin: 0;
+}
+
+body.presenter_view div#current_presenter_notes h1 {
+    font-size: 50%;
+    display: block;
+}
+
+div#current_presenter_notes {
+  display: none;
+}
+
+div.slide div.presenter_notes, div.slides div.presenter_notes {
+  display: none;
+}
+
+/* Slide styles */
+
+div.slide p {
+  font-size: 20px;
+}
+
+.slide.far-past {
+  display: block;
+  margin-left: -2400px;
+}
+
+.slide.past {
+  display: block;
+  margin-left: -1400px;
+}
+
+.slide.current {
+  display: block;
+  margin-left: -450px;
+}
+
+.slide.future {
+  display: block;
+  margin-left: 500px;
+}
+
+.slide.far-future {
+  display: block;
+  margin-left: 1500px;
+}
+
+body.three-d div.slides {
+  -webkit-transform: translateX(50px) scale(0.8) rotateY(10deg);
+  -moz-transform: translateX(50px) scale(0.8) rotateY(10deg);
+  -o-transform: translateX(50px) scale(0.8) rotateY(10deg);
+}
+
+
+/* Content */
+
+header:not(:only-child) {
+  font-family: "Lucida Grande", "Trebuchet MS", Verdana, sans-serif;
+  font-weight: normal;
+  font-size: 50px;
+  letter-spacing: -.05em;
+  color: black;
+  text-shadow: rgba(0, 0, 0, 0.2) 0 2px 5px;
+  position: absolute;
+  left: 30px;
+  top: 25px;
+  margin: 0;
+  padding: 0;
+}
+
+header h1, header h2, header h3, header h4, header h5, header h6 {
+  display: inline;
+  font-size: 100%;
+  font-weight: normal;
+  padding: 0;
+  margin: 0;
+}
+
+header h2:first-child {
+  margin-top: 0;
+}
+
+section, .slide header:only-child h1 {
+  font-family: "Lucida Grande", "Trebuchet MS", Verdana, sans-serif;
+  color: #3f3f3f;
+  text-shadow: rgba(0, 0, 0, 0.2) 0 2px 5px;
+  margin-left: 30px;
+  margin-right: 30px;
+  margin-top: 100px;
+  display: block;
+  overflow: hidden;
+}
+
+img { display: inline-block; margin: auto; }
+
+section img.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+section img.align-right {
+  display: block;
+  margin-left: auto;
+  margin-right: 0;
+}
+
+section img.align-left {
+  display: block;
+  margin-right: auto;
+  margin-left: 0;
+}
+
+a {
+  color: inherit;
+  display: inline-block;
+  text-decoration: none;
+  line-height: 110%;
+  border-bottom: 2px solid #3f3f3f;
+}
+
+pre {
+  font-size: 16px;
+  font-family: Monaco, Courier, monospace;
+}
+
+li {
+  padding: 10px 0;
+  font-size: 20px;
+}
+
+.slide header:only-child h1 {
+  line-height: 180%;
+  text-align: center;
+  display: table-cell;
+  vertical-align: middle;
+  height: 700px;
+  width: 900px;
+  font-size: 50px;
+  margin-top:100px;
+  margin-bottom:100px;
+}
+
+.sidebar {
+  clear: both;
+  background: -webkit-gradient(linear, top right, bottom right, from(#dde), to(#fff));
+  -webkit-transition: margin 0.25s ease-in-out;
+  background-color: #eee;
+  background: -moz-linear-gradient(right, #dde, #fff);
+  border-right: 5px solid #ccd;
+  z-index: 9999999;
+  height: 100%;
+  overflow: hidden;
+  top: 0;
+  position: absolute;
+  display: block;
+  margin: 0;
+  margin-left: -400px;
+  padding: 10px 16px;
+  overflow: auto;
+  -webkit-transition: margin 0.2s ease-in-out;
+  -moz-transition: margin 0.2s ease-in-out;
+  -o-transition: margin 0.2s ease-in-out;
+}
+
+.sidebar h2 {
+  text-shadow: rgba(0, 0, 0, 0.2) 0 2px 5px;
+  margin: 0 0 16px;
+  padding: 0;
+}
+
+.sidebar table {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border-collapse: collapse;
+}
+
+.sidebar table caption {
+  display: none;
+}
+
+.sidebar tr {
+  margin: 2px 0;
+  border-bottom: 1px solid #ccc;
+}
+
+.sidebar th {
+  text-align: left;
+  font-weight: normal;
+  max-width: 300px;
+  overflow: hidden;
+}
+
+.sidebar tr.sub th {
+  text-indent: 20px;
+}
+
+.sidebar td {
+  text-align: right;
+  min-width: 20px;
+}
+
+.sidebar a {
+  display: block;
+  text-decoration: none;
+  border-bottom: none;
+  padding: 4px 0;
+}
+
+.sidebar tr.active {
+  background: #ff0;
+}
+
+aside {
+  display: none;
+}
+  aside.source {
+    position: absolute;
+    bottom: 6px;
+    left: 10px;
+    text-indent: 10px;
+  }
+  aside.page_number {
+    position: absolute;
+    bottom: 6px;
+    right: 10px;
+    text-indent: 10px;
+  }
+
+.notes {
+  display: none;
+  padding: 10px;
+  background: #ccc;
+  border-radius: 10px;
+  -moz-border-radius: 10px;
+  -webkit-border-radius: 10px;
+}
+  div.slide p.notes {
+    font-size: 90%;
+}
+
+/* Pygments default theme */
+.hll { background-color: #ffffcc }
+.c { color: #408080; font-style: italic } /* Comment */
+.err { border: 1px solid #FF0000 } /* Error */
+.k { color: #008000; font-weight: bold } /* Keyword */
+.o { color: #666666 } /* Operator */
+.cm { color: #408080; font-style: italic } /* Comment.Multiline */
+.cp { color: #BC7A00 } /* Comment.Preproc */
+.c1 { color: #408080; font-style: italic } /* Comment.Single */
+.cs { color: #408080; font-style: italic } /* Comment.Special */
+.gd { color: #A00000 } /* Generic.Deleted */
+.ge { font-style: italic } /* Generic.Emph */
+.gr { color: #FF0000 } /* Generic.Error */
+.gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.gi { color: #00A000 } /* Generic.Inserted */
+.go { color: #808080 } /* Generic.Output */
+.gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+.gs { font-weight: bold } /* Generic.Strong */
+.gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.gt { color: #0040D0 } /* Generic.Traceback */
+.kc { color: #008000; font-weight: bold } /* Keyword.Constant */
+.kd { color: #008000; font-weight: bold } /* Keyword.Declaration */
+.kn { color: #008000; font-weight: bold } /* Keyword.Namespace */
+.kp { color: #008000 } /* Keyword.Pseudo */
+.kr { color: #008000; font-weight: bold } /* Keyword.Reserved */
+.kt { color: #B00040 } /* Keyword.Type */
+.m { color: #666666 } /* Literal.Number */
+.s { color: #BA2121 } /* Literal.String */
+.na { color: #7D9029 } /* Name.Attribute */
+.nb { color: #008000 } /* Name.Builtin */
+.nc { color: #0000FF; font-weight: bold } /* Name.Class */
+.no { color: #880000 } /* Name.Constant */
+.nd { color: #AA22FF } /* Name.Decorator */
+.ni { color: #999999; font-weight: bold } /* Name.Entity */
+.ne { color: #D2413A; font-weight: bold } /* Name.Exception */
+.nf { color: #0000FF } /* Name.Function */
+.nl { color: #A0A000 } /* Name.Label */
+.nn { color: #0000FF; font-weight: bold } /* Name.Namespace */
+.nt { color: #008000; font-weight: bold } /* Name.Tag */
+.nv { color: #19177C } /* Name.Variable */
+.ow { color: #AA22FF; font-weight: bold } /* Operator.Word */
+.w { color: #bbbbbb } /* Text.Whitespace */
+.mf { color: #666666 } /* Literal.Number.Float */
+.mh { color: #666666 } /* Literal.Number.Hex */
+.mi { color: #666666 } /* Literal.Number.Integer */
+.mo { color: #666666 } /* Literal.Number.Oct */
+.sb { color: #BA2121 } /* Literal.String.Backtick */
+.sc { color: #BA2121 } /* Literal.String.Char */
+.sd { color: #BA2121; font-style: italic } /* Literal.String.Doc */
+.s2 { color: #BA2121 } /* Literal.String.Double */
+.se { color: #BB6622; font-weight: bold } /* Literal.String.Escape */
+.sh { color: #BA2121 } /* Literal.String.Heredoc */
+.si { color: #BB6688; font-weight: bold } /* Literal.String.Interpol */
+.sx { color: #008000 } /* Literal.String.Other */
+.sr { color: #BB6688 } /* Literal.String.Regex */
+.s1 { color: #BA2121 } /* Literal.String.Single */
+.ss { color: #19177C } /* Literal.String.Symbol */
+.bp { color: #008000 } /* Name.Builtin.Pseudo */
+.vc { color: #19177C } /* Name.Variable.Class */
+.vg { color: #19177C } /* Name.Variable.Global */
+.vi { color: #19177C } /* Name.Variable.Instance */
+.il { color: #666666 } /* Literal.Number.Integer.Long */
+
+#blank {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: black;
+  width: 100%;
+  height: 100%;
+  z-index: 64;
+  display: none;
+}
+
+    </style>
+    
+    
+    <!-- /Styles -->
+    <!-- Javascripts -->
+    
+    <script>
+      function main() {
+    // Since we don't have the fallback of attachEvent and
+    // other IE only stuff we won't try to run JS for IE.
+    // It will run though when using Google Chrome Frame
+    if (document.all) { return; }
+
+    var currentSlideNo;
+    var notesOn = false;
+    var expanded = false;
+    var hiddenContext = false;
+    var blanked = false;
+    var slides = document.getElementsByClassName('slide');
+    var touchStartX = 0;
+    var spaces = /\s+/, a1 = [''];
+    var tocOpened = false;
+    var helpOpened = false;
+    var overviewActive = false;
+    var modifierKeyDown = false;
+    var scale = 1;
+    var showingPresenterView = false;
+    var presenterViewWin = null;
+    var isPresenterView = false;
+
+    var str2array = function(s) {
+        if (typeof s == 'string' || s instanceof String) {
+            if (s.indexOf(' ') < 0) {
+                a1[0] = s;
+                return a1;
+            } else {
+                return s.split(spaces);
+            }
+        }
+        return s;
+    };
+
+    var trim = function(str) {
+        return str.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+    };
+
+    var addClass = function(node, classStr) {
+        classStr = str2array(classStr);
+        var cls = ' ' + node.className + ' ';
+        for (var i = 0, len = classStr.length, c; i < len; ++i) {
+            c = classStr[i];
+            if (c && cls.indexOf(' ' + c + ' ') < 0) {
+                cls += c + ' ';
+            }
+        }
+        node.className = trim(cls);
+    };
+
+    var removeClass = function(node, classStr) {
+        var cls;
+        if (!node) {
+            throw 'no node provided';
+        }
+        if (classStr !== undefined) {
+            classStr = str2array(classStr);
+            cls = ' ' + node.className + ' ';
+            for (var i = 0, len = classStr.length; i < len; ++i) {
+                cls = cls.replace(' ' + classStr[i] + ' ', ' ');
+            }
+            cls = trim(cls);
+        } else {
+            cls = '';
+        }
+        if (node.className != cls) {
+            node.className = cls;
+        }
+    };
+
+    var getSlideEl = function(slideNo) {
+        if (slideNo > 0) {
+            return slides[slideNo - 1];
+        } else {
+            return null;
+        }
+    };
+
+    var getSlideTitle = function(slideNo) {
+        var el = getSlideEl(slideNo);
+        if (el) {
+            var headers = el.getElementsByTagName('header');
+            if (headers.length > 0) {
+                return el.getElementsByTagName('header')[0].innerText;
+            }
+        }
+        return null;
+    };
+
+    var getSlidePresenterNote = function(slideNo) {
+        var el = getSlideEl(slideNo);
+        if (el) {
+            var n = el.getElementsByClassName('presenter_notes');
+            if (n.length > 0) {
+                return n[0];
+            }
+        }
+        return null;
+    };
+
+    var changeSlideElClass = function(slideNo, className) {
+        var el = getSlideEl(slideNo);
+        if (el) {
+            removeClass(el, 'far-past past current future far-future');
+            addClass(el, className);
+        }
+    };
+
+    var updateSlideClasses = function(updateOther) {
+        window.location.hash = (isPresenterView ? "presenter" : "slide") + currentSlideNo;
+
+        for (var i=1; i<currentSlideNo-1; i++) {
+            changeSlideElClass(i, 'far-past');
+        }
+
+        changeSlideElClass(currentSlideNo - 1, 'past');
+        changeSlideElClass(currentSlideNo, 'current');
+        changeSlideElClass(currentSlideNo + 1, 'future');
+
+        for (i=currentSlideNo+2; i<slides.length+1; i++) {
+            changeSlideElClass(i, 'far-future');
+        }
+
+        highlightCurrentTocLink();
+
+        processContext();
+
+        document.getElementsByTagName('title')[0].innerText = getSlideTitle(currentSlideNo);
+
+        updatePresenterNotes();
+
+        if (updateOther) { updateOtherPage(); }
+    };
+
+    var updatePresenterNotes = function() {
+        if (!isPresenterView) { return; }
+
+        var existingNote = document.getElementById('current_presenter_notes');
+        var currentNote = getSlidePresenterNote(currentSlideNo).cloneNode(true);
+        currentNote.setAttribute('id', 'presenter_note');
+
+        existingNote.replaceChild(currentNote, document.getElementById('presenter_note'));
+    };
+
+    var highlightCurrentTocLink = function() {
+        var toc = document.getElementById('toc');
+
+        if (toc) {
+            var tocRows = toc.getElementsByTagName('tr');
+            for (var i=0; i<tocRows.length; i++) {
+                removeClass(tocRows.item(i), 'active');
+            }
+
+            var currentTocRow = document.getElementById('toc-row-' + currentSlideNo);
+            if (currentTocRow) {
+                addClass(currentTocRow, 'active');
+            }
+        }
+    };
+
+    var updateOtherPage = function() {
+        if (!showingPresenterView) { return; }
+
+        var w = isPresenterView ? window.opener : presenterViewWin;
+        w.postMessage('slide#' + currentSlideNo, '*');
+    };
+
+    var nextSlide = function() {
+        if (currentSlideNo < slides.length) {
+            currentSlideNo++;
+        }
+        updateSlideClasses(true);
+    };
+
+    var prevSlide = function() {
+        if (currentSlideNo > 1) {
+            currentSlideNo--;
+        }
+        updateSlideClasses(true);
+    };
+
+    var showNotes = function() {
+        var notes = getSlideEl(currentSlideNo).getElementsByClassName('notes');
+        for (var i = 0, len = notes.length; i < len; i++) {
+            notes.item(i).style.display = (notesOn) ? 'none':'block';
+        }
+        notesOn = !notesOn;
+    };
+
+    var showSlideNumbers = function() {
+        var asides = document.getElementsByClassName('page_number');
+        var hidden = asides[0].style.display != 'block';
+        for (var i = 0; i < asides.length; i++) {
+            asides.item(i).style.display = hidden ? 'block' : 'none';
+        }
+    };
+
+    var showSlideSources = function() {
+        var asides = document.getElementsByClassName('source');
+        var hidden = asides[0].style.display != 'block';
+        for (var i = 0; i < asides.length; i++) {
+            asides.item(i).style.display = hidden ? 'block' : 'none';
+        }
+    };
+
+    var showToc = function() {
+        if (helpOpened) {
+                showHelp();
+        }
+        var toc = document.getElementById('toc');
+        if (toc) {
+            toc.style.marginLeft = tocOpened ? '-' + (toc.clientWidth + 20) + 'px' : '0px';
+            tocOpened = !tocOpened;
+        }
+        updateOverview();
+    };
+
+    var showHelp = function() {
+        if (tocOpened) {
+                showToc();
+        }
+
+        var help = document.getElementById('help');
+
+        if (help) {
+            help.style.marginLeft = helpOpened ? '-' + (help.clientWidth + 20) + 'px' : '0px';
+            helpOpened = !helpOpened;
+        }
+    };
+
+    var showPresenterView = function() {
+        if (isPresenterView) { return; }
+
+        if (showingPresenterView) {
+            presenterViewWin.close();
+            presenterViewWin = null;
+            showingPresenterView = false;
+        } else {
+            presenterViewWin = open(window.location.pathname + "#presenter" + currentSlideNo, 'presenter_notes',
+                                                                    'directories=no,location=no,toolbar=no,menubar=no,copyhistory=no');
+            showingPresenterView = true;
+        }
+    };
+
+    var switch3D = function() {
+        if (document.body.className.indexOf('three-d') == -1) {
+            document.getElementsByClassName('presentation')[0].style.webkitPerspective = '1000px';
+            document.body.className += ' three-d';
+        } else {
+            window.setTimeout('document.getElementsByClassName(\'presentation\')[0].style.webkitPerspective = \'0\';', 2000);
+            document.body.className = document.body.className.replace(/three-d/, '');
+        }
+    };
+
+    var toggleOverview = function() {
+        if (!overviewActive) {
+            addClass(document.body, 'expose');
+            overviewActive = true;
+            setScale(1);
+        } else {
+            removeClass(document.body, 'expose');
+            overviewActive = false;
+            if (expanded) {
+                setScale(scale);    // restore scale
+            }
+        }
+        processContext();
+        updateOverview();
+    };
+
+    var updateOverview = function() {
+        try {
+            var presentation = document.getElementsByClassName('presentation')[0];
+        } catch (e) {
+            return;
+        }
+
+        if (isPresenterView) {
+            var action = overviewActive ? removeClass : addClass;
+            action(document.body, 'presenter_view');
+        }
+
+        var toc = document.getElementById('toc');
+
+        if (!toc) {
+            return;
+        }
+
+        if (!tocOpened || !overviewActive) {
+            presentation.style.marginLeft = '0px';
+            presentation.style.width = '100%';
+        } else {
+            presentation.style.marginLeft = toc.clientWidth + 'px';
+            presentation.style.width = (presentation.clientWidth - toc.clientWidth) + 'px';
+        }
+    };
+
+    var computeScale = function() {
+        var cSlide = document.getElementsByClassName('current')[0];
+        var sx = cSlide.clientWidth / window.innerWidth;
+        var sy = cSlide.clientHeight / window.innerHeight;
+        return 1 / Math.max(sx, sy);
+    };
+
+    var setScale = function(scale) {
+        var presentation = document.getElementsByClassName('slides')[0];
+        var transform = 'scale(' + scale + ')';
+        presentation.style.MozTransform = transform;
+        presentation.style.WebkitTransform = transform;
+        presentation.style.OTransform = transform;
+        presentation.style.msTransform = transform;
+        presentation.style.transform = transform;
+    };
+
+    var expandSlides = function() {
+        if (overviewActive) {
+            return;
+        }
+        if (expanded) {
+            setScale(1);
+            expanded = false;
+        } else {
+            scale = computeScale();
+            setScale(scale);
+            expanded = true;
+        }
+    };
+
+    var showContext = function() {
+        try {
+            var presentation = document.getElementsByClassName('slides')[0];
+            removeClass(presentation, 'nocontext');
+        } catch (e) {}
+    };
+
+    var hideContext = function() {
+        try {
+            var presentation = document.getElementsByClassName('slides')[0];
+            addClass(presentation, 'nocontext');
+        } catch (e) {}
+    };
+
+    var processContext = function() {
+        if (hiddenContext) {
+            hideContext();
+        } else {
+            showContext();
+        }
+    };
+
+    var toggleContext = function() {
+        hiddenContext = !hiddenContext;
+        processContext();
+    };
+
+    var toggleBlank = function() {
+        blank_elem = document.getElementById('blank');
+
+        blank_elem.style.display = blanked ? 'none' : 'block';
+
+        blanked = !blanked;
+    };
+
+    var isModifierKey = function(keyCode) {
+        switch (keyCode) {
+            case 16: // shift
+            case 17: // ctrl
+            case 18: // alt
+            case 91: // command
+                return true;
+                break;
+            default:
+                return false;
+                break;
+        }
+    };
+
+    var checkModifierKeyUp = function(event) {
+        if (isModifierKey(event.keyCode)) {
+            modifierKeyDown = false;
+        }
+    };
+
+    var checkModifierKeyDown = function(event) {
+        if (isModifierKey(event.keyCode)) {
+            modifierKeyDown = true;
+        }
+    };
+
+    var handleBodyKeyDown = function(event) {
+        switch (event.keyCode) {
+            case 13: // Enter
+                if (overviewActive) {
+                    toggleOverview();
+                }
+                break;
+            case 27: // ESC
+                toggleOverview();
+                break;
+            case 37: // left arrow
+            case 33: // page up
+                prevSlide();
+                break;
+            case 39: // right arrow
+            case 32: // space
+            case 34: // page down
+                nextSlide();
+                break;
+            case 50: // 2
+                if (!modifierKeyDown) {
+                        showNotes();
+                }
+                break;
+            case 51: // 3
+                if (!modifierKeyDown && !overviewActive) {
+                    switch3D();
+                }
+                break;
+            case 190: // .
+            case 48: // 0
+            case 66: // b
+                if (!modifierKeyDown && !overviewActive) {
+                    toggleBlank();
+                }
+                break;
+            case 67: // c
+                if (!modifierKeyDown && !overviewActive) {
+                    toggleContext();
+                }
+                break;
+            case 69: // e
+                if (!modifierKeyDown && !overviewActive) {
+                    expandSlides();
+                }
+                break;
+            case 72: // h
+                showHelp();
+                break;
+            case 78: // n
+                if (!modifierKeyDown && !overviewActive) {
+                    showSlideNumbers();
+                }
+                break;
+            case 80: // p
+                if (!modifierKeyDown && !overviewActive) {
+                    showPresenterView();
+                }
+                break;
+            case 83: // s
+                if (!modifierKeyDown && !overviewActive) {
+                    showSlideSources();
+                }
+                break;
+            case 84: // t
+                showToc();
+                break;
+        }
+    };
+
+    var handleWheel = function(event) {
+        if (tocOpened || helpOpened || overviewActive) {
+            return;
+        }
+
+        var delta = 0;
+
+        if (!event) {
+            event = window.event;
+        }
+
+        if (event.wheelDelta) {
+            delta = event.wheelDelta/120;
+            if (window.opera) delta = -delta;
+        } else if (event.detail) {
+            delta = -event.detail/3;
+        }
+
+        if (delta && delta <0) {
+            nextSlide();
+        } else if (delta) {
+            prevSlide();
+        }
+    };
+
+    var addSlideClickListeners = function() {
+        for (var i=0; i < slides.length; i++) {
+            var slide = slides.item(i);
+            slide.num = i + 1;
+            slide.addEventListener('click', function(e) {
+                if (overviewActive) {
+                    currentSlideNo = this.num;
+                    toggleOverview();
+                    updateSlideClasses(true);
+                    e.preventDefault();
+                }
+                return false;
+            }, true);
+        }
+    };
+
+    var addRemoteWindowControls = function() {
+        window.addEventListener("message", function(e) {
+            if (e.data.indexOf("slide#") != -1) {
+                    currentSlideNo = Number(e.data.replace('slide#', ''));
+                    updateSlideClasses(false);
+            }
+        }, false);
+    };
+
+    var addTouchListeners = function() {
+        document.addEventListener('touchstart', function(e) {
+            touchStartX = e.touches[0].pageX;
+        }, false);
+        document.addEventListener('touchend', function(e) {
+            var pixelsMoved = touchStartX - e.changedTouches[0].pageX;
+            var SWIPE_SIZE = 150;
+            if (pixelsMoved > SWIPE_SIZE) {
+                nextSlide();
+            }
+            else if (pixelsMoved < -SWIPE_SIZE) {
+             prevSlide();
+            }
+        }, false);
+    };
+
+    var addTocLinksListeners = function() {
+        var toc = document.getElementById('toc');
+        if (toc) {
+            var tocLinks = toc.getElementsByTagName('a');
+            for (var i=0; i < tocLinks.length; i++) {
+                tocLinks.item(i).addEventListener('click', function(e) {
+                    currentSlideNo = Number(this.attributes['href'].value.replace('#slide', ''));
+                    updateSlideClasses(true);
+                    e.preventDefault();
+                }, true);
+            }
+        }
+    };
+
+    // initialize
+
+    (function() {
+        if (window.location.hash == "") {
+            currentSlideNo = 1;
+        } else if (window.location.hash.indexOf("#presenter") != -1) {
+            currentSlideNo = Number(window.location.hash.replace('#presenter', ''));
+            isPresenterView = true;
+            showingPresenterView = true;
+            presenterViewWin = window;
+            addClass(document.body, 'presenter_view');
+        } else {
+            currentSlideNo = Number(window.location.hash.replace('#slide', ''));
+        }
+
+        document.addEventListener('keyup', checkModifierKeyUp, false);
+        document.addEventListener('keydown', handleBodyKeyDown, false);
+        document.addEventListener('keydown', checkModifierKeyDown, false);
+        document.addEventListener('DOMMouseScroll', handleWheel, false);
+
+        window.onmousewheel = document.onmousewheel = handleWheel;
+        window.onresize = expandSlides;
+
+        for (var i = 0, el; el = slides[i]; i++) {
+            addClass(el, 'slide far-future');
+        }
+        updateSlideClasses(false);
+
+        // add support for finger events (filter it by property detection?)
+        addTouchListeners();
+
+        addTocLinksListeners();
+
+        addSlideClickListeners();
+
+        addRemoteWindowControls();
+    })();
+}
+
+    </script>
+    
+    
+    <!-- /Javascripts -->
+</head>
+<body data-gr-c-s-loaded="true">
+  <div id="blank"></div>
+  <div class="presentation">
+    <div id="current_presenter_notes">
+      <div id="presenter_note"></div>
+    </div>
+    <div class="slides">
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide current">
+          <div class="inner">
+            
+            <header><h1>Distributed Systems <br> COMP90015 2017 SM1 <br> Project 1 - EZShare <br> Resource Sharing Network</h1></header>
+            
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              1/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide future">
+          <div class="inner">
+            
+            <header><h1>Introduction</h1></header>
+            
+            
+            <section><p>In Project 1 we will build a resource sharing 
+network that consists of servers, which can communicate with each other,
+ and clients which can communicate with the servers. The system will be 
+called EZShare.</p>
+<p>In typical usage, each user that wants to share files will start an 
+EZShare server on the machine that contains the files. An EZShare client
+ can be used to instruct the server to share the files.</p>
+<p>Servers can be queried for what files they are sharing. Clients can request a shared file be downloaded to them.</p>
+<p>Servers can connect to other servers and queries can propogate throughout all of the servers.</p>
+<p>In general, servers can publish resources; a file is just one kind of
+ resource. In EZShare, other resources are just references (URIs) to 
+e.g. web pages.</p>
+<p>Every published resource (including shared files) has an optional 
+owner and channel to which it belongs. These things allow resources to 
+be controlled, e.g. not all shared resources have to be available to the
+ public.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              2/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Architecture</h1></header>
+            
+            
+            <section><p><img alt="ezarch-small.png" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAqMAAAF4CAYAAABgjvAZAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAABcSAAAXEgFnn9JSAAAAB3RJTUUH4QMTFxcwLvPh6QAAaTBJREFUeNrt3Xd8U/X+x/HXN+kue09BUXELiuO6BVKaMhyAG+W6vY7r3i0hdV/39udCcSG4ENrSgAu34EJBcLL37m5zvr8/GlrCLPO06fv5eNzH5XybnHxOanPeOec7jLVTLCISCwLG9BjudhEiu4O1U4a5XYOI7BxxbhcgIiKyHQJuFyAiO4fH7QJEREREpP5SGBURERER1yiMioiIiIhrFEZFRERExDUKoyIiIiLiGoVREREREXGNwqiIiIiIuEZhVERERERcozAqIiIiIq5RGBURERER12z3cqALi9u6XbtIvdA2eaHbJYiIiOwy2x1GFxS1c7t2kXpBYVRk51lY3JaFRbqYIrKrHdb8+xo/drvDqIiISN1jsBi3ixCR9ajPqIiIiIi4RmFURERERFyjMCoiIiIirlEYFRERERHXKIyKiIiIiGsURkVERETENQqjIiIiIuIahVERERERcY3CqIiIiIi4RmFURERERFyjMCoiIiIirlEYFRERERHXKIyKiIiIiGsURkVERETENQqjIiIiIuIahVERERERcY3CqIiIiIi4RmFURERERFyjMCoiIiIirlEYFRERERHXKIyKiIiIiGsURkVERETENQqjIiIiIuIahVGR2GHcLkBERGRbKYyKxA7rdgEiIiLbSmFUJHboyqiIiNQ5CqMisUNXRkVEpM5RGBURERER1yiMioiIiIhrFEZFRERExDUKoyIiIiLiGoVREREREXGNwqiIiIiIuEZhVERERERcozAqIiIiIq5RGBURERER1yiMioiIiIhrFEZFRERExDUKoyIiIiLiGoVREREREXGNwqiIiIiIuEZhVERERERcE+d2AbXdonlzWL5kEQANGjWmZdv2pKQ2cLssERERkZigMLoJv0z9mg9ef5lvP53IqhXLCFdUAODxeklISGT/bj04KeMUep8ymMZNm7tdroiISJXZf8xk1q8/sXLpkqq2Nh06se9Bh9Kmwx5ulyey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eI5P60ePY09i9p+z+PazSfzz+28UrF5FaUkxzVq2JrVhIzruuTcHHX4U7TrtSeOmzTc7wTyAf+A5NGjUmCUL5tFxzy4c1OOoHX4fLrrhTg7o3oNF8+ZSuHYNbffozPFp/bZ5P3XleEVE6rLuRx/PC+Mm82nuB+S/P4oZP05h5bKlm3xsyzbtOPLE3px+wWUcdNiReOO2fvrvst9BPPPeJELvv837I5/n9+nTNjsGoGWbdnTZ/yBOSB9Az34DadCo8SYfl9qgEakNG1G4dg1xcfG0aL3jd8ROO/9SPhn/PgvnzQYqg2if08+ifae9tmk/deV4Y5GxdordnidOXX6427XvFmWlpRiP2eJovO1VUVGOE3ZISEzc8Z3VAfXteHeWw5vXeGRnwJgew92uV2R32N5z18Lidiwoaut2+TtdWWkpa1evYv7sP1m8YB6rly+joqKCho2bsEeXfWnfeS8aN2lWoxC6KYVr17Bi2RJ++/l7ykpKWLZoIS3atKVh4ya06bAHLdq0I7VBo41WNNqQtZZlixcSrqjAeDw0bd5yp5wTVi1fSklx5K6mMTRu2ozklNTt3l9tP966YBvOXboyujW78j+auLj4evUbqG/HKyKyuyQkJtK8VWuat2q9S/af2rBR1R2tHWGM2WjFvp2hSfOW9ep4Y4063omIiIiIaxRGRURERMQ1CqMiIiIi4hqFURERERFxjcKoiIiIiLhGYVREREREXKMwKiIiIiKuURgVEREREdcojIqIiIiIaxRGRURERMQ1CqMiIiIi4hqFURERERFxjcKoiIiIiLhGYVREREREXKMwKiIiIiKuURgViR3G7QJERES2lcKoSOywbhcgIiKyrRRGRWKHroyKiEidozAqEjt0ZVREROochVGR2KEroyJbo69sIrWOwqhI7NBpVmRr9JVNpNZRGBWJHTrNimyNvrKJ1DoKoyKxQ6dZka3RVzaRWkdhVCR26DQrsjX6yiZS6yiMisQOnWZFtkZf2URqHYVRkdih06zI1ugrm0itozAqEjt0mhXZGn1lE6l1FEZFYodOsyIiUucojIrEDl0ZFRGROkdhVCR26MqoiIjUOQqjIrFDV0ZFRKTOURgViR26MioiInWOwqhI7NCVURERqXMURkVih66MiohInaMwKhI7dGVURETqHIVREREREXGNwqiIiIiIuEZhVERERERc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"></p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              3/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Communication</h1></header>
+            
+            
+            <section><p>All communication will be via TCP.</p>
+<p>All messages, apart from file contents, will be in JSON format, one JSON message per line.</p>
+<p>The text encoding for messages will be <em>Java Modified UTF-8 Encoding</em>, which is the format used by the <strong>writeUTF()</strong> and <strong>readUTF()</strong> methods in Java.</p>
+<p>File contents will be transmitted as exact byte sequences, mixed between JSON messages as required.</p>
+<p>Interactions will be synchronous request-reply, with a single request per connection.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              4/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Resource</h1></header>
+            
+            
+            <section><p>A <strong>Resource</strong> has the following attributes:</p>
+<ul>
+<li><strong>Name</strong>: optional user supplied name (String), default is "".</li>
+<li><strong>Description</strong>: optional user supplied description (String), default is "".</li>
+<li><strong>Tags</strong>: optional user supplied list of tags (Array of Strings), default is empty list.</li>
+<li><strong>URI</strong>: mandatory user supplied absolute URI, that is unique for each resource on a given EZShare Server within each <strong>Channel</strong> on the server (String). The <strong>URI</strong> must conform to official URI format.</li>
+<li><strong>Channel</strong>: optional user supplied channel name (String), default is "".</li>
+<li><strong>Owner</strong>: optional user supplied owner name (String), default is "".</li>
+<li><strong>EZserver</strong>: system supplied server:port name that lists the <strong>Resource</strong> (String).</li>
+</ul>
+<p><strong>Resource</strong>s need to be stored, looked up and transmitted, so it will be wise to develop a robust <strong>Resource</strong> class.</p>
+<p>Some special rules for strings are that they must not contain the null character <code>"\0"</code>
+ and must not start or end with white space. The server may silently 
+remove these things from receive resource descriptions. As well, the <strong>Owner</strong> cannot be the character "*".</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              5/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Channels and Owners</h1></header>
+            
+            
+            <section><p>Each resource <em>must</em> be stored and processed in a way that respects its <strong>Channel</strong> and <strong>Owner</strong>. You may think of the primary key for a resource being a tuple:</p>
+<p><code>(owner,channel,uri)</code></p>
+<p>The default <strong>Owner</strong> is "", the default <strong>Channel</strong> is "", and an absolute <strong>URI</strong> must always be given. The tuple becomes:</p>
+<p><code>("","",uri)</code></p>
+<p>A <strong>Channel</strong> may be used without an <strong>Owner</strong> and vice versa, and they may be used together.</p>
+<p>There is no client command that will list used channels or owners. 
+These things are kept secret by the server. The user needs to remember 
+the owner and channel, if one was used, in order to refer to the 
+resource at a later time. The default channel can be thought of as the <em>public</em> channel. Other channels are thought of as <em>private</em>
+ channels. The default owner means that anyone can update the resource. 
+Otherwise updates require the correct owner name to work.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              6/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Shared File</h1></header>
+            
+            
+            <section><p>A shared file is a <strong>Resource</strong> with a file <strong>URI</strong>, e.g. <code>file:///path/to/file.doc</code>.</p>
+<p>The EZShare Server that lists the shared file can be asked to download it.</p>
+<p>Other <strong>URI</strong>s, such as e.g. http and ftp, will be for 
+informational purposes only. Accessing and downloading these is not 
+required in this project.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              7/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>EZShare Server Commands</h1></header>
+            
+            
+            <section><ul>
+<li><strong>PUBLISH</strong>: create a new <strong>Resource</strong> and make it available</li>
+<li><strong>REMOVE</strong>: remove an existing <strong>Resource</strong></li>
+<li><strong>SHARE</strong>: create a new <strong>Resource</strong> with a file <strong>URI</strong> and make it avialble</li>
+<li><strong>QUERY</strong>: list all resources that match a <strong>Resource</strong> template</li>
+<li><strong>FETCH</strong>: download all resources that match a <strong>Resource</strong> template which includes a file <strong>URI</strong></li>
+<li><strong>EXCHANGE</strong>: receive a list of EZShare host:port names</li>
+</ul></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              8/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>PUBLISH command</h1></header>
+            
+            
+            <section><pre><code>{
+    "command": "PUBLISH",
+    "resource": {
+        "name": "Unimelb website",
+        "tags": [
+            "web",
+            "html"
+        ],
+        "description": "The main page for the University of Melbourne",
+        "uri": "http:\/\/www.unimelb.edu.au",
+        "channel": "",
+        "owner": "",
+        "ezserver": null
+    }
+}
+</code></pre>
+<p>This creates a resource on the server with primary key <code>("","",http://www.unimelb.edu.au)</code></p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              9/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>PUBLISH rules enforced by server</h1></header>
+            
+            
+            <section><ul>
+<li>The command field is case sensitive (<em>this is the same for all commands</em>).</li>
+<li>A valid resource must be given. Missing fields may be filled in with
+ defaults, which are the empty sting "" in most case, or the empty array
+ for tags (<em>this is the same for all commands</em>).</li>
+<li>The URI must be present, must be absolute and cannot be a file scheme.</li>
+<li>Publishing a resource with the same primary key as an existing resource simply overwrites the existing resource.</li>
+<li>Publishing a resource with the same channel and URI but different 
+owner is not allowed. This ensures that in any given channel, a given 
+URI is only present once.</li>
+<li>String values must not contain the "\0" character, nor start or end 
+with whitespace. The server may silently remove such characters or may 
+consider the resource invalid if such things are found (<em>this is the same for all commands</em>).</li>
+<li>The <strong>Owner</strong> field must not be the single character "*". The resource is invalid in this case. (<em>This is the same for all commands.</em>)</li>
+</ul></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              10/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>PUBLISH responses from server</h1></header>
+            
+            
+            <section><p>For a successful publish:</p>
+<pre><code>{ "response" : "success" }
+</code></pre>
+<p>If the publishing rules (other than below) were broken:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "cannot publish resource"
+}
+</code></pre>
+<p>If the resource contained incorrect information that could not be recovered from:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "invalid resource"
+}
+</code></pre>
+<p>If the resource field was not given or not of the correct type:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "missing resource"
+}
+</code></pre></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              11/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Generic responses from server</h1></header>
+            
+            
+            <section><p>If the command is invalid (unknown):</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "invalid command"
+}
+</code></pre>
+<p>If the command is missing or incorrect type:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "missing or incorrect type for command"
+}
+</code></pre></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              12/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>REMOVE command</h1></header>
+            
+            
+            <section><pre><code>{
+    "command": "REMOVE",
+    "resource": {
+        "name": "",
+        "tags": [],
+        "description": "",
+        "uri": "http:\/\/www.unimelb.edu.au",
+        "channel": "",
+        "owner": "",
+        "ezserver": null
+    }
+}
+</code></pre>
+<p>This will remove the resource with the primary key <code>("","",http://www.unimelb.edu.au)</code>.</p>
+<p>The other fields of the resource are not needed, since only the 
+primary key fields are required to remove the resource. If the other 
+fields are given, they are ignored.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              13/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>REMOVE responses from server</h1></header>
+            
+            
+            <section><p>For a successful remove:</p>
+<pre><code>{ "response" : "success" }
+</code></pre>
+<p>If the resource did not exist:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "cannot remove resource"
+}
+</code></pre>
+<p>If the resource contained incorrect information that could not be recovered from:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "invalid resource"
+}
+</code></pre>
+<p>If the resource field was not given or not of the correct type:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "missing resource"
+}
+</code></pre></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              14/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>SHARE command</h1></header>
+            
+            
+            <section><pre><code>{
+    "command": "SHARE",
+    "secret": "2os41f58vkd9e1q4ua6ov5emlv",
+    "resource": {
+        "name": "EZShare JAR",
+        "tags": [
+            "jar"
+        ],
+        "description": "The jar file for EZShare. Use with caution.",
+        "uri":"file:\/\/\/\/home\/aaron\/EZShare\/ezshare.jar",
+        "channel": "my_private_channel",
+        "owner": "aaron010",
+        "ezserver": null
+    }
+}
+</code></pre>
+<p>The SHARE command works almost identically to the PUBLISH command, 
+with the major difference being that the URI must be a file scheme, 
+while the PUBLISH command enforces that the URI cannot be a file scheme.</p>
+<p>Another difference is that the server secret is required for the command to be successful.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              15/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>SHARE rules enforced by the server</h1></header>
+            
+            
+            <section><ul>
+<li>The server secret must be present and must equal the value known to the server, for the command to succeed.</li>
+<li>The URI must be present, must be absolute, non-authoritative and 
+must be a file scheme. It must point to a file on the local file system 
+that the server can read as a file.</li>
+<li>Sharing a resource with the same primary key as an existing resource
+ simply overwrites the existing resource (same as PUBLISH command).</li>
+<li>Sharing a resource with the same channel and URI but different owner
+ is not allowed. This ensures that in any given channel, a given URI is 
+only present once (same as PUBLISH command).</li>
+</ul></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              16/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>SHARE responses from server</h1></header>
+            
+            
+            <section><p>For a successful share:</p>
+<pre><code>{ "response" : "success" }
+</code></pre>
+<p>If the rules (other than below) are broken:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "cannot share resource"
+}
+</code></pre>
+<p>If the resource contained incorrect information that could not be recovered from:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "invalid resource"
+}
+</code></pre>
+<p>If the secret was incorrect:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "incorrect secret"
+}
+</code></pre>
+<p>If the resource or secret field was not given or not of the correct type:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "missing resource and\/or secret"
+}
+</code></pre></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              17/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>QUERY command</h1></header>
+            
+            
+            <section><pre><code>{
+    "command": "QUERY",
+    "relay": true,
+    "resourceTemplate": {
+        "name": "",
+        "tags": [],
+        "description": "",
+        "uri": "",
+        "channel": "",
+        "owner": "",
+        "ezserver": null
+    }
+}
+</code></pre>
+<p>This command also contains a <strong>relay</strong> field. In usual circumstances this would be set <code>true</code> by the client.</p>
+<p>There is no resource, but rather a <strong>resourceTemplate</strong>. The purpose of the template is to specify the query in terms of desired fields that must match.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              18/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>QUERY rules enforced by the server</h1></header>
+            
+            
+            <section><p>The purpose of the query is to match the template against existing resources. The template will match a candidate resource if:</p>
+<p><strong>(</strong>The template channel equals (case sensitive) the resource channel <strong>AND</strong></p>
+<p>If the template contains an owner that is not "", then the candidate owner must equal it (case sensitive) <strong>AND</strong></p>
+<p>Any tags present in the template also are present in the candidate (case insensitive) <strong>AND</strong></p>
+<p>If the template contains a URI then the candidate URI matches (case sensitive) <strong>AND</strong></p>
+<p><strong>(</strong>The candidate name contains the template name as a substring (for non "" template name) <strong>OR</strong></p>
+<p>The candidate description contains the template description as a substring (for non "" template descriptions) <strong>OR</strong></p>
+<p>The template description and name are both ""<strong>))</strong></p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              19/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>QUERY responses from server</h1></header>
+            
+            
+            <section><p>The response format is a sequence of messages. For a successful query, e.g. that matched two resources:</p>
+<pre><code>{ "response" : "success" }
+{ RESOURCE }
+{ RESOURCE }
+{ "resultSize" : 2 }
+</code></pre>
+<p>An example returned Resource is:</p>
+<pre><code>{
+    "name": "Unimelb website",
+    "tags": [
+        "web",
+        "html"
+    ],
+    "description": "The main page for the University of Melbourne",
+    "uri": "http:\/\/www.unimelb.edu.au",
+    "channel": "",
+    "owner": "",
+    "ezserver": "aaron9010:3780"
+}
+</code></pre>
+<p>Note that the <strong>ezserver</strong> field has been filled in by the server, to represent the server's hostname and port.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              20/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>QUERY responses from server</h1></header>
+            
+            
+            <section><p>The server will never reveal the owner of a 
+resource in a response. If a resource has an owner then it will be 
+replaced with the "*" character as in the following example:</p>
+<pre><code>{
+    "name": "EZShare JAR",
+    "tags": [
+        "jar"
+    ],
+    "description": "The jar file for EZShare. Use with caution.",
+    "uri": "file:\/\/\/\/home\/aaron\/EZShare\/ezshare.jar",
+    "channel": "my_private_channel",
+    "owner": "*",
+    "ezserver": "aaron9010:3780"
+}
+</code></pre>
+<p>This example also shows a resource that matched a channel, i.e. the user had specified the channel name in their query template.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              21/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>QUERY responses from server</h1></header>
+            
+            
+            <section><p>Other responses are related to standard errors.</p>
+<p>If the resource template contained incorrect information that could not be recovered from:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "invalid resourceTemplate"
+}
+</code></pre>
+<p>If the resource or secret field was not given or not of the correct type:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "missing resourceTemplate"
+}
+</code></pre></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              22/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>FETCH command</h1></header>
+            
+            
+            <section><pre><code>{
+    "command": "FETCH",
+    "resourceTemplate": {
+        "name": "",
+        "tags": [],
+        "description": "",
+        "uri": "file:\/\/\/\/home\/aaron\/EZShare\/ezshare.jar",
+        "channel": "my_private_channel",
+        "owner": "",
+        "ezserver": null
+    }
+}
+</code></pre>
+<p>The role of the fetch command is to download the file resource from the server to the client.</p>
+<p>Only the channel and URI fields in the template is relevant as it must be an exact match for the command to work.</p>
+<p>Recall that, in a given channel, a given URI can only be present 
+once, so that this command will only ever download a single file.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              23/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>FETCH responses from server</h1></header>
+            
+            
+            <section><p>A successful fetch will respond as follows:</p>
+<pre><code>{ "response" : "success" }
+{ RESOURCE }
+exact bytes of resource
+{ "resultSize" : 1 }
+</code></pre>
+<p>The resource will have an additional field <strong>resourceSize</strong> that specifies the number of bytes (i.e. file size), e.g.:</p>
+<pre><code>{
+    "name": "EZShare JAR",
+    "tags": [
+        "jar"
+    ],
+    "description": "The jar file for EZShare. Use with caution.",
+    "uri": "file:\/\/\/\/home\/aaron\/EZShare\/ezshare.jar",
+    "channel": "my_private_channel",
+    "owner": "*",
+    "ezserver": "aaron9010:3780",
+    "resourceSize": 328515
+}
+</code></pre>
+<p>The <strong>resourceSize</strong> field allows the client to read exactly the bytes of the file that follow.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              24/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>FETCH responses from server</h1></header>
+            
+            
+            <section><p>Other responses are related to standard errors.</p>
+<p>If the resource template contained incorrect information that could not be recovered from:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "invalid resourceTemplate"
+}
+</code></pre>
+<p>If the resource template was not given or not of the correct type:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "missing resourceTemplate"
+}
+</code></pre></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              25/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>EXCHANGE command</h1></header>
+            
+            
+            <section><pre><code>{
+    "command": "EXCHANGE",
+    "serverList": [
+        {
+            "hostname": "115.146.85.165",
+            "port": 3780
+        },
+        {
+            "hostname": "115.146.85.24",
+            "port": 3780
+        }
+    ]
+}
+</code></pre>
+<p>The purpose of the exchange command is to tell the server about a list of other servers.</p>
+<p>The server is free to process any valid server record that it finds in the list and ignore others.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              26/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>EXCHANGE responses from server</h1></header>
+            
+            
+            <section><p>If the command succeeded:</p>
+<pre><code>{ "response" : "success" }
+</code></pre>
+<p>If a server record is found to be invalid:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "missing resourceTemplate"
+}
+</code></pre>
+<p>If the server list was missing or invalid:</p>
+<pre><code>{ "response" : "error",
+  "errorMessage" : "missing or invalid server list"
+}
+</code></pre></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              27/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Server Interactions</h1></header>
+            
+            
+            <section><p>Each server maintains a list of Server Records, which are hostname:port strings. To begin, this list is empty.</p>
+<p>Every X minutes (10 minutes by default, but configurable on the 
+command line when the server is run), the server contacts a randomly 
+selected server from the Server Records and initiates an EXCHANGE 
+command with it. It provides the selected server with a copy of its 
+entire Server Records list.</p>
+<p>If the selected server is not reachable or a communication error 
+occurs then the selected server is removed from the Server Records and 
+no further action is taken in this round.</p>
+<p>The receiving server processes the EXCHANGE command as explained earlier, essentially just adding the servers to its list.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              28/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>QUERY relay</h1></header>
+            
+            
+            <section><p>When a QUERY message is received with <strong>relay</strong> field set as <strong>true</strong> then the server sends a QUERY command to each of the servers in the Server Records list with the following change:</p>
+<ul>
+<li><em>the owner and channel information in the original query are both set to "" in the forwarded query</em></li>
+<li><strong>relay</strong> field is set to <strong>false</strong></li>
+</ul>
+<p>Results returned from other servers are forwarded back to the 
+original client on the same connection, aggregated with the results of 
+the query processed locally. Therefore the response in the successful 
+case is:</p>
+<pre><code>{ "response" : "success" }
+{ RESOURCE }
+{ RESOURCE }
+...
+{ "resultSize" : X }
+</code></pre>
+<p>where X is the number of hits, taking all of the results from other servers into account.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              29/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Connection Interval Limit</h1></header>
+            
+            
+            <section><p>The server will ensure that the time between 
+successive connections from any IP address will be no less than a limit 
+(1 second by default but configurable on the command line).</p>
+<p>An incomming request that violates this rule will be closed immediately with no response.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              30/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Client command line arguments</h1></header>
+            
+            
+            <section><p>The client must work exactly with the following command line options:</p>
+<pre><code>-channel &lt;arg&gt;       channel
+-debug               print debug information
+-description &lt;arg&gt;   resource description
+-exchange            exchange server list with server
+-fetch               fetch resources from server
+-host &lt;arg&gt;          server host, a domain name or IP address
+-name &lt;arg&gt;          resource name
+-owner &lt;arg&gt;         owner
+-port &lt;arg&gt;          server port, an integer
+-publish             publish resource on server
+-query               query for resources from server
+-remove              remove resource from server
+-secret &lt;arg&gt;        secret
+-servers &lt;arg&gt;       server list, host1:port1,host2:port2,...
+-share               share resource on server
+-tags &lt;arg&gt;          resource tags, tag1,tag2,tag3,...
+-uri &lt;arg&gt;           resource URI
+</code></pre></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              31/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Example command lines</h1></header>
+            
+            
+            <section><p>java -cp ezshare.jar EZShare.Client -query -channel my_private_channel -debug</p>
+<p>java -cp ezshare.jar EZShare.Client -exchange -servers 115.146.85.165:3780,115.146.85.24:3780 -debug</p>
+<p>java -cp ezshare.jar EZShare.Client -fetch -channel my_private_channel -uri file:///home/aaron/EZShare/ezshare.jar -debug</p>
+<p>java -cp ezshare.jar EZShare.Client -share -uri 
+file:///home/aaron/EZShare/ezshare.jar -name "EZShare JAR" -description 
+"The jar file for EZShare. Use with caution." -tags jar -channel 
+my_private_channel -owner aaron010 -secret 2os41f58vkd9e1q4ua6ov5emlv 
+-debug</p>
+<p>java -cp ezshare.jar EZShare.Client -publish -name "Unimelb website" 
+-description "The main page for the University of Melbourne" -uri 
+http://www.unimelb.edu.au -tags web,html -debug</p>
+<p>java -cp ezshare.jar EZShare.Client -query</p>
+<p>java -cp ezshare.jar EZShare.Client -remove -uri http://www.unimelb.edu.au</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              32/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Server command line arguments</h1></header>
+            
+            
+            <section><p>The server must work exactly with the following command line options:</p>
+<pre><code>-advertisedhostname &lt;arg&gt;        advertised hostname
+-connectionintervallimit &lt;arg&gt;   connection interval limit in seconds
+-exchangeinterval &lt;arg&gt;          exchange interval in seconds
+-port &lt;arg&gt;                      server port, an integer
+-secret &lt;arg&gt;                    secret
+-debug                           print debug information
+</code></pre>
+<p>The default secret will be a large random string.</p>
+<p>The default advertised host name will be the operating system supplied hostname.</p>
+<p>The default exchange interval will be 10 minutes (600 seconds).</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              33/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Example server output when just started</h1></header>
+            
+            
+            <section><p>java -cp ezshare.jar EZShare.Server</p>
+<p>20/03/2017 01:17:57.953 - [EZShare.Server.main] - [INFO] - Starting the EZShare Server</p>
+<p>20/03/2017 01:17:57.979 - [EZShare.ServerControl.<init>] - [INFO] - using secret: 5uv1ii7ec362me7hkch3s7l5c4</init></p>
+<p>20/03/2017 01:17:57.981 - [EZShare.ServerControl.<init>] - [INFO] - using advertised hostname: aaron9010</init></p>
+<p>20/03/2017 01:17:57.984 - [EZShare.ServerIO.<init>] - [INFO] - bound to port 3780</init></p>
+<p>20/03/2017 01:17:57.986 - [EZShare.ServerExchanger.<init>] - [INFO] - started</init></p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              34/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Debug command line option</h1></header>
+            
+            
+            <section><p>The purpose of the debug option is that your 
+system will print out every message sent or received, as in the 
+following example for the client. So long as the words "SENT: ...msg..."
+ and "RECEIVED: ...msg..." are present on a single line, it does not 
+matter what else is on the same line (in this example the Java Logger is
+ being used).</p>
+<p>java -cp ezshare.jar EZShare.Client -publish -name "Unimelb website" 
+-description "The main page for the University of Melbourne" -uri 
+http://www.unimelb.edu.au -tags web,html -debug</p>
+<p>20/03/2017 01:20:45.807 - [EZShare.Client.main] - [INFO] - setting debug on</p>
+<p>20/03/2017 01:20:45.809 - [EZShare.Client.publishCommand] - [FINE] - publishing to localhost:3780</p>
+<p>20/03/2017 01:20:45.865 - [EZShare.Client.sendMessage] - [FINE] - 
+SENT: { "command" : "PUBLISH", "resource" : { "name" : "Unimelb 
+website", "tags" : ["web", "html"], "description" : "The main page for 
+the University of Melbourne", "uri" : "http://www.unimelb.edu.au", 
+"channel" : "", "owner" : "", "ezserver" : null } }</p>
+<p>20/03/2017 01:20:45.912 - [EZShare.Client.publishCommand] - [FINE] - RECEIVED: { "response" : "success" }</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              35/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Technical aspects</h1></header>
+            
+            
+            <section><ul>
+<li>Requires Java 1.8 or above.</li>
+<li>Suggested to make use of the URI class to enforce URI rules.</li>
+<li>Make sure to use a JSON parser/formatter to generate correct JSON messages.</li>
+<li>Apache Commons CLI library is good for parsing command line options.</li>
+<li>Everyone should implement the same protocol, which means that 
+clients and servers from different groups should interoperate fine.</li>
+</ul></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              36/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Your Report</h1></header>
+            
+            
+            <section><ul>
+<li>Use 10pt font, double column, 1 inch margin all around.</li>
+<li>On the first page, clearly show your group's name and the names of 
+all members in the group. Clearly show the login names with university 
+emails as well. The members of the group MUST match the information 
+entered into LMS.</li>
+<li>The report is aimed at addressing a number of questions discussed next. Have one section for in the report for each.</li>
+<li>Figures in the report, including examples of messages and protocol 
+interaction, and any pseudo-code (that you may or may not use), are not 
+counted as part of the word length guidelines.</li>
+</ul></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              37/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Introduction</h1></header>
+            
+            
+            <section><p>Write roughly 125 words to briefly describe in your own words:</p>
+<ul>
+<li>what the project was about</li>
+<li>what were the technical challenges that you faced building the system</li>
+<li>what outcomes did you achieve</li>
+</ul></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              38/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Scalability</h1></header>
+            
+            
+            <section><p>There are a number of aspects of the system that present a scalability challenge. In roughly 375 words:</p>
+<ul>
+<li>identify aspects of the system that present problems for scalability<ul>
+<li>be specific with why it is not scalable</li>
+</ul>
+</li>
+<li>suggest revisions to the protocol that may overcome these problems</li>
+</ul></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              39/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Concurrency</h1></header>
+            
+            
+            <section><p>For a small system, with only a couple of 
+servers and a few clients, concurrency issues are unlikely to arise. 
+However consider a system with hundreds of servers and thousands of 
+clients. There are some aspects of the system that may require further 
+thought to ensure that concurrency issues are properly handled. 
+Concurrency issues may include things that go technically wrong, but may
+ also include things that do not work as well as expected.</p>
+<p>In roughly 375 words describe:</p>
+<ul>
+<li>any concurrency issues that you identify, be specific with examples</li>
+<li>possible revisions to the protocol that may overcome these issues</li>
+</ul></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              40/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Other Distributed System Challenges</h1></header>
+            
+            
+            <section><p>Choose a third distributed system challenge that
+ relates to the system and write roughly 375 words explaining how it 
+relates, how the system currently addresses the challenge (if it does at
+ all), and how you might change the system to improve it with respect to
+ the challenge.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              41/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+      <!-- slide source: proj1.md -->
+      <div class="slide-wrapper">
+        <div class="slide far-future">
+          <div class="inner">
+            
+            <header><h1>Submission</h1></header>
+            
+            
+            <section><p>You need to submit the following via LMS:</p>
+<ul>
+<li>
+<p>Your report in PDF format <em>only</em>.</p>
+</li>
+<li>
+<p>Your ezshare.jar (that contains both Client and Server main classes as exemplified earlier).</p>
+</li>
+<li>
+<p>Your source files in a .ZIP or .TAR archive <em>only</em>.</p>
+</li>
+</ul>
+<p>Submissions will be due at the end of Week 8 via a group submission.</p></section>
+            
+          </div>
+          <div class="presenter_notes">
+            <header><h1>Presenter Notes</h1></header>
+            <section>
+            
+            </section>
+          </div>
+          <footer>
+            
+            <aside class="source">
+              Source: <a href="https://app.lms.unimelb.edu.au/bbcswebdav/pid-5971066-dt-content-rid-23053935_2/courses/COMP90015_2017_SM1/proj1.md">proj1.md</a>
+            </aside>
+            
+            <aside class="page_number">
+              42/42
+            </aside>
+          </footer>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+  <div id="toc" class="sidebar hidden">
+    <h2>Table of Contents</h2>
+    <table>
+      <caption>Table of Contents</caption>
+      
+      <tbody><tr id="toc-row-1" class="active">
+        <th><a href="#slide1">Distributed Systems <br> COMP90015 2017 SM1 <br> Project 1 - EZShare <br> Resource Sharing Network</a></th>
+        <td><a href="#slide1">1</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-2" class="">
+        <th><a href="#slide2">Introduction</a></th>
+        <td><a href="#slide2">2</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-3" class="">
+        <th><a href="#slide3">Architecture</a></th>
+        <td><a href="#slide3">3</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-4" class="">
+        <th><a href="#slide4">Communication</a></th>
+        <td><a href="#slide4">4</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-5">
+        <th><a href="#slide5">Resource</a></th>
+        <td><a href="#slide5">5</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-6">
+        <th><a href="#slide6">Channels and Owners</a></th>
+        <td><a href="#slide6">6</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-7">
+        <th><a href="#slide7">Shared File</a></th>
+        <td><a href="#slide7">7</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-8">
+        <th><a href="#slide8">EZShare Server Commands</a></th>
+        <td><a href="#slide8">8</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-9">
+        <th><a href="#slide9">PUBLISH command</a></th>
+        <td><a href="#slide9">9</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-10">
+        <th><a href="#slide10">PUBLISH rules enforced by server</a></th>
+        <td><a href="#slide10">10</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-11">
+        <th><a href="#slide11">PUBLISH responses from server</a></th>
+        <td><a href="#slide11">11</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-12">
+        <th><a href="#slide12">Generic responses from server</a></th>
+        <td><a href="#slide12">12</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-13">
+        <th><a href="#slide13">REMOVE command</a></th>
+        <td><a href="#slide13">13</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-14">
+        <th><a href="#slide14">REMOVE responses from server</a></th>
+        <td><a href="#slide14">14</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-15">
+        <th><a href="#slide15">SHARE command</a></th>
+        <td><a href="#slide15">15</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-16">
+        <th><a href="#slide16">SHARE rules enforced by the server</a></th>
+        <td><a href="#slide16">16</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-17">
+        <th><a href="#slide17">SHARE responses from server</a></th>
+        <td><a href="#slide17">17</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-18">
+        <th><a href="#slide18">QUERY command</a></th>
+        <td><a href="#slide18">18</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-19">
+        <th><a href="#slide19">QUERY rules enforced by the server</a></th>
+        <td><a href="#slide19">19</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-20">
+        <th><a href="#slide20">QUERY responses from server</a></th>
+        <td><a href="#slide20">20</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-21">
+        <th><a href="#slide21">QUERY responses from server</a></th>
+        <td><a href="#slide21">21</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-22">
+        <th><a href="#slide22">QUERY responses from server</a></th>
+        <td><a href="#slide22">22</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-23">
+        <th><a href="#slide23">FETCH command</a></th>
+        <td><a href="#slide23">23</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-24">
+        <th><a href="#slide24">FETCH responses from server</a></th>
+        <td><a href="#slide24">24</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-25">
+        <th><a href="#slide25">FETCH responses from server</a></th>
+        <td><a href="#slide25">25</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-26">
+        <th><a href="#slide26">EXCHANGE command</a></th>
+        <td><a href="#slide26">26</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-27">
+        <th><a href="#slide27">EXCHANGE responses from server</a></th>
+        <td><a href="#slide27">27</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-28">
+        <th><a href="#slide28">Server Interactions</a></th>
+        <td><a href="#slide28">28</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-29">
+        <th><a href="#slide29">QUERY relay</a></th>
+        <td><a href="#slide29">29</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-30">
+        <th><a href="#slide30">Connection Interval Limit</a></th>
+        <td><a href="#slide30">30</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-31">
+        <th><a href="#slide31">Client command line arguments</a></th>
+        <td><a href="#slide31">31</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-32">
+        <th><a href="#slide32">Example command lines</a></th>
+        <td><a href="#slide32">32</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-33">
+        <th><a href="#slide33">Server command line arguments</a></th>
+        <td><a href="#slide33">33</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-34">
+        <th><a href="#slide34">Example server output when just started</a></th>
+        <td><a href="#slide34">34</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-35">
+        <th><a href="#slide35">Debug command line option</a></th>
+        <td><a href="#slide35">35</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-36">
+        <th><a href="#slide36">Technical aspects</a></th>
+        <td><a href="#slide36">36</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-37">
+        <th><a href="#slide37">Your Report</a></th>
+        <td><a href="#slide37">37</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-38">
+        <th><a href="#slide38">Introduction</a></th>
+        <td><a href="#slide38">38</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-39">
+        <th><a href="#slide39">Scalability</a></th>
+        <td><a href="#slide39">39</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-40">
+        <th><a href="#slide40">Concurrency</a></th>
+        <td><a href="#slide40">40</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-41">
+        <th><a href="#slide41">Other Distributed System Challenges</a></th>
+        <td><a href="#slide41">41</a></td>
+      </tr>
+      
+      
+      <tr id="toc-row-42">
+        <th><a href="#slide42">Submission</a></th>
+        <td><a href="#slide42">42</a></td>
+      </tr>
+      
+      
+    </tbody></table>
+  </div>
+  
+  <div id="help" class="sidebar hidden">
+    <h2>Help</h2>
+    <table>
+      <caption>Help</caption>
+      <tbody><tr>
+        <th>Table of Contents</th>
+        <td>t</td>
+      </tr>
+      <tr>
+        <th>Exposé</th>
+        <td>ESC</td>
+      </tr>
+      <tr>
+        <th>Full screen slides</th>
+        <td>e</td>
+      </tr>
+      <tr>
+        <th>Presenter View</th>
+        <td>p</td>
+      </tr>
+      <tr>
+        <th>Source Files</th>
+        <td>s</td>
+      </tr>
+      <tr>
+        <th>Slide Numbers</th>
+        <td>n</td>
+      </tr>
+      <tr>
+        <th>Toggle screen blanking</th>
+        <td>b</td>
+      </tr>
+      <tr>
+        <th>Show/hide slide context</th>
+        <td>c</td>
+      </tr>
+      <tr>
+        <th>Notes</th>
+        <td>2</td>
+      </tr>
+      <tr>
+        <th>Help</th>
+        <td>h</td>
+      </tr>
+    </tbody></table>
+  </div>
+  <script>main()</script>
+
+</body></html>
